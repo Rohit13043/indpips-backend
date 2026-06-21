@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../db.js';
 import { authenticate, requireAdmin } from '../auth/jwt.js';
 import { getAdminStats } from '../services/adminStats.js';
+import { getMarketingStats } from '../services/marketing.js';
 
 export const adminRouter = Router();
 adminRouter.use(authenticate, requireAdmin);
@@ -10,6 +11,11 @@ adminRouter.use(authenticate, requireAdmin);
 // Firm-level stats: overview, funnel, unit economics and risk book.
 adminRouter.get('/stats', async (_req, res) => {
   res.json(await getAdminStats());
+});
+
+// Marketing: per-channel signups/funded/revenue and affiliate leaderboard.
+adminRouter.get('/marketing', async (_req, res) => {
+  res.json(await getMarketingStats());
 });
 
 // List traders with KYC status and account counts.

@@ -200,6 +200,12 @@ the EA's `login`.
 | GET | `/admin/stats` | admin | Firm overview, funnel, unit economics, risk book |
 | GET | `/admin/users` | admin | List traders with KYC status + account counts |
 | PATCH | `/admin/users/:id/kyc` | admin | Verify / reject a trader's KYC |
+| GET | `/admin/marketing` | admin | Per-channel signups/funded/revenue + affiliate leaderboard |
+| GET | `/affiliate/me` | user | A trader's referral code, referrals, funded, earnings |
+
+Registration accepts `ref` (a referrer's code) and `channel` (acquisition source).
+When a referred trader buys a challenge, a 10% `Commission` is credited to the
+referrer automatically.
 
 ### Try it end to end (mock)
 

@@ -58,6 +58,22 @@ accountsRouter.post('/', async (req, res) => {
     },
     include: { plan: true },
   });
+
+  // Affiliate commission: if this buyer was referred, credit their referrer.
+  const buyer = await prisma.user.findUnique({ where: { id: req.user!.sub }, select: { referredById: true } });
+  if (buyer?.referredById && plan.priceCents > 0) {
+    const ratePct = 10;
+    await prisma.commission.create({
+      data: {
+        affiliateUserId: buyer.referredById,
+        referredUserId: req.user!.sub,
+        accountId: account.id,
+        amountCents: Math.round(plan.priceCents * (ratePct / 100)),
+        ratePct,
+      },
+    });
+  }
+
   res.status(201).json(account);
 });
 

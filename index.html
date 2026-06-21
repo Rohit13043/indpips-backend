@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>INDPIPS — Funded Prop Trading</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#070b16;--text:#eef2fb;--muted:#93a0bd;--saffron:#ff9933;--blue:#2f6bff;--violet:#7c5cff;--line:rgba(255,255,255,.1)}
+  *{box-sizing:border-box} body{margin:0;font-family:'Plus Jakarta Sans',system-ui,Arial,sans-serif;color:var(--text);
+    background:radial-gradient(1100px 600px at 80% -10%,#16203a,var(--bg) 55%);min-height:100vh;display:flex;flex-direction:column}
+  .grad{background:linear-gradient(135deg,var(--blue),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent}
+  header{display:flex;justify-content:space-between;align-items:center;padding:22px 6vw}
+  .logo{font-family:Sora;font-weight:800;font-size:22px}
+  nav a{color:var(--muted);text-decoration:none;margin-left:22px;font-weight:600}
+  nav a:hover{color:var(--text)}
+  main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 6vw}
+  h1{font-family:Sora;font-weight:800;font-size:clamp(34px,6vw,64px);line-height:1.05;margin:0 0 14px;letter-spacing:-1px}
+  p.sub{color:#c7d3ee;max-width:620px;font-size:18px;line-height:1.6;margin:0 0 30px}
+  .cta{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+  .btn{padding:14px 24px;border-radius:14px;font-weight:700;text-decoration:none;font-size:16px}
+  .btn.primary{background:linear-gradient(135deg,var(--blue),var(--violet));color:#fff;box-shadow:0 14px 30px -12px var(--blue)}
+  .btn.ghost{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--text)}
+  .badges{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:34px}
+  .badge{background:rgba(255,255,255,.05);border:1px solid var(--line);padding:9px 14px;border-radius:999px;font-size:13px;font-weight:600;color:#dbe6ff}
+  .pills{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:40px;max-width:760px}
+  .pill{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-width:150px}
+  .pill b{font-family:Sora;display:block;font-size:18px} .pill span{color:var(--muted);font-size:13px}
+  footer{padding:24px 6vw;color:var(--muted);font-size:13px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+</style>
+</head>
+<body>
+  <header>
+    <div class="logo"><span style="color:var(--saffron)">IND</span><span class="grad">PIPS</span></div>
+    <nav>
+      <a href="/dashboard.html">Trader login</a>
+      <a href="/admin.html">Admin</a>
+    </nav>
+  </header>
+  <main>
+    <h1>Trade. Get Funded.<br><span class="grad">Get Paid.</span></h1>
+    <p class="sub">India's trader-first funded prop firm. Clear rules, transparent dashboards, and fast payouts — 1-Step, 2-Step and Instant programs from $5K to $200K.</p>
+    <div class="cta">
+      <a class="btn primary" href="/dashboard.html">Open trader dashboard</a>
+      <a class="btn ghost" href="/dashboard.html">Buy a challenge</a>
+    </div>
+    <div class="pills">
+      <div class="pill"><b>6% / 4%→6%</b><span>1-Step &amp; 2-Step targets</span></div>
+      <div class="pill"><b>up to 80%</b><span>profit split</span></div>
+      <div class="pill"><b>$5K–$200K</b><span>account sizes</span></div>
+      <div class="pill"><b>Fast ₹ payouts</b><span>after 7 / 5 / 4 days</span></div>
+    </div>
+    <div class="badges">
+      <div class="badge">🔒 Bank-grade security</div>
+      <div class="badge">✓ KYC verified</div>
+      <div class="badge">📈 MT5 supported</div>
+    </div>
+  </main>
+  <footer>
+    <span>© INDPIPS · Funded Prop Trading</span>
+    <span>API: <a href="https://api.indpips.com/health" style="color:var(--muted)">status</a></span>
+  </footer>
+</body>
+</html>

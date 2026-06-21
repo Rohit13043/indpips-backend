@@ -22,11 +22,35 @@ model User {
   role         String   @default("trader") // trader | admin
   country      String?
   kycStatus    String   @default("pending") // pending | verified | rejected
+
+  // --- Marketing / affiliate ---
+  referralCode  String?  @unique          // this user's own code to share
+  referredById  String?                   // the user who referred them
+  signupChannel String   @default("organic") // organic | youtube | instagram | affiliate | ...
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  accounts Account[]
-  payouts  Payout[]
+  accounts    Account[]
+  payouts     Payout[]
+  commissions Commission[] @relation("affiliateCommissions") // commissions this user earned
+}
+
+// A commission earned by an affiliate when a referred trader buys a challenge.
+model Commission {
+  id              String  @id @default(cuid())
+  affiliateUserId String  // who earns it
+  referredUserId  String  // the buyer
+  accountId       String  // the challenge purchased
+  amountCents     Int     // commission amount
+  ratePct         Float   @default(10)
+  status          String  @default("earned") // earned | paid
+
+  affiliate User @relation("affiliateCommissions", fields: [affiliateUserId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([affiliateUserId])
 }
 
 // ---------------------------------------------------------------------------

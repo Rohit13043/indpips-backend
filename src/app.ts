@@ -7,6 +7,7 @@ import { ingestRouter } from './routes/ingest.js';
 import { payoutsRouter } from './routes/payouts.js';
 import { prohibitedRouter } from './routes/prohibited.js';
 import { adminRouter } from './routes/admin.js';
+import { affiliateRouter } from './routes/affiliate.js';
 
 export function createApp() {
   const app = express();
@@ -22,6 +23,7 @@ export function createApp() {
   app.use('/payouts', payoutsRouter);
   app.use('/prohibited-activities', prohibitedRouter);
   app.use('/admin', adminRouter);
+  app.use('/affiliate', affiliateRouter);
 
   // Centralised error handler.
   app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
