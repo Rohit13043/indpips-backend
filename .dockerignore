@@ -1,0 +1,12 @@
+node_modules
+dist
+*.db
+*.db-journal
+prisma/dev.db*
+.env
+.git
+dashboard.html
+admin.html
+assets
+mt5-ea
+*.md

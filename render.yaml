@@ -1,0 +1,25 @@
+# Render.com blueprint — deploys the INDPIPS API straight from a Git repo.
+# In Render: New > Blueprint, point it at the repo containing this file.
+# A free web service with a 1 GB persistent disk for the SQLite database.
+services:
+  - type: web
+    name: indpips-api
+    runtime: docker
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true        # Render generates a strong secret
+      - key: EA_BRIDGE_SECRET
+        generateValue: true
+      - key: MT5_ADAPTER
+        value: mock                # switch to metaapi / eabridge when ready
+      - key: DATABASE_URL
+        value: file:/data/indpips.db
+      - key: SYNC_INTERVAL_MS
+        value: "60000"
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1

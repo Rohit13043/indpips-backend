@@ -1,0 +1,230 @@
+// Prisma schema for the funded prop firm backend.
+// Dev uses SQLite for zero-config. For production, change `provider` to
+// "postgresql" and point DATABASE_URL at your Postgres instance.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Users
+// ---------------------------------------------------------------------------
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  fullName     String?
+  role         String   @default("trader") // trader | admin
+  country      String?
+  kycStatus    String   @default("pending") // pending | verified | rejected
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  accounts Account[]
+  payouts  Payout[]
+}
+
+// ---------------------------------------------------------------------------
+// ChallengePlan — the rules template a trader buys into (e.g. "10K 2-Step")
+// ---------------------------------------------------------------------------
+model ChallengePlan {
+  id        String  @id @default(cuid())
+  name      String
+  active    Boolean @default(true)
+
+  accountSize Float // starting balance, e.g. 10000
+  priceCents  Int   @default(0) // what the trader pays for the challenge
+
+  // Number of evaluation phases before funding: 1 = 1-step, 2 = 2-step,
+  // 0 = instant funding.
+  phases      Int   @default(2)
+
+  // Profit targets (% of accountSize) per phase. Null = no target.
+  phase1TargetPct Float?
+  phase2TargetPct Float?
+
+  // Daily drawdown (% ). Null = no daily rule (instant).
+  dailyDdPct Float?
+
+  // Max / overall drawdown (%).
+  maxDdPct      Float
+  maxDdTrailing Boolean @default(true)
+
+  // Basis ("balance" | "equity") and refresh ("eod" | "realtime") applied to
+  // BOTH the daily and max drawdown for this plan.
+  ddBasis   String @default("balance")
+  ddRefresh String @default("eod")
+  // For ddRefresh = "eod": minutes past UTC midnight of the daily boundary.
+  // 1260 = 21:00 UTC = 02:30 IST.
+  ddBoundaryUtcMin Int @default(1260)
+
+  weekendTradingAllowed Boolean @default(false)
+  // Max floating loss a single open trade may show, as % of balance. Null = off.
+  maxTradeFloatingLossPct Float?
+
+  // Payout eligibility (funded accounts).
+  payoutMinProfitableDays Int   @default(5)
+  payoutMinDailyProfitPct Float @default(0.25)
+
+  profitSplitPct Float @default(80)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accounts Account[]
+}
+
+// ---------------------------------------------------------------------------
+// Account — a trader's instance of a plan, mapped to one MT5 login.
+// This carries the live state machine.
+// ---------------------------------------------------------------------------
+model Account {
+  id     String @id @default(cuid())
+  userId String
+  planId String
+
+  user User          @relation(fields: [userId], references: [id])
+  plan ChallengePlan @relation(fields: [planId], references: [id])
+
+  // --- MT5 linkage ---
+  mt5Login    String? // the MT5 account number
+  mt5Server   String? // broker server name
+  mt5Source   String  @default("mock") // mock | metaapi | eabridge
+  // For MetaApi this is the provisioned account id; for eabridge unused.
+  mt5AccountId String?
+
+  // --- State machine ---
+  // pending -> phase_1 -> phase_2 -> ... -> funded
+  //   any state can transition to: breached (rule broken) or passed_pending (target hit, awaiting next phase/funding)
+  status      String @default("pending")
+  phase       Int    @default(1) // current evaluation phase (1-based). Funded accounts keep their last phase number.
+
+  startingBalance Float
+
+  // Latest known figures, updated by the sync worker.
+  balance Float
+  equity  Float
+
+  // Trailing peak in the plan's DD basis (peak balance for eod-balance plans,
+  // peak equity for realtime-equity plans).
+  peakValue Float
+  // The value (in the plan's basis) at the start of the current trading day,
+  // used for the static daily drawdown. Refreshed at the daily boundary.
+  dayOpenValue Float
+  // Timestamp of the last daily boundary the worker rolled over.
+  lastBoundaryAt DateTime?
+
+  tradingDays Int @default(0) // distinct days with at least one trade
+
+  lastSyncAt  DateTime?
+  fundedAt    DateTime?
+  breachedAt  DateTime?
+  breachReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  trades         Trade[]
+  snapshots      MetricSnapshot[]
+  violations     RuleViolation[]
+  payouts        Payout[]
+
+  @@index([userId])
+  @@index([status])
+  @@unique([mt5Source, mt5Login])
+}
+
+// ---------------------------------------------------------------------------
+// Trade — a closed deal ingested from MT5.
+// ---------------------------------------------------------------------------
+model Trade {
+  id        String @id @default(cuid())
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id])
+
+  // External id from MT5 (deal/ticket) — used for idempotent ingestion.
+  externalId String
+
+  symbol    String
+  side      String  // buy | sell
+  volume    Float   // lots
+  openPrice Float
+  closePrice Float
+  profit    Float   // net P/L in account currency (incl. commission/swap)
+  commission Float  @default(0)
+  swap      Float   @default(0)
+
+  openedAt  DateTime
+  closedAt  DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([accountId, externalId])
+  @@index([accountId, closedAt])
+}
+
+// ---------------------------------------------------------------------------
+// MetricSnapshot — a point-in-time record written every sync, for charts/audit.
+// ---------------------------------------------------------------------------
+model MetricSnapshot {
+  id        String @id @default(cuid())
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id])
+
+  balance        Float
+  equity         Float
+  dailyDrawdown  Float // as % of the day's start equity (positive number)
+  overallDrawdown Float // as % of starting balance or peak (positive number)
+  profitPct      Float // total profit as % of starting balance
+  tradingDays    Int
+
+  createdAt DateTime @default(now())
+
+  @@index([accountId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// RuleViolation — audit log of every rule breach the engine detects.
+// ---------------------------------------------------------------------------
+model RuleViolation {
+  id        String @id @default(cuid())
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id])
+
+  rule      String // daily_drawdown | max_drawdown | consistency
+  message   String
+  valuePct  Float
+  limitPct  Float
+  hard      Boolean @default(true) // hard = account breached; soft = warning only
+
+  createdAt DateTime @default(now())
+
+  @@index([accountId])
+}
+
+// ---------------------------------------------------------------------------
+// Payout — a funded trader's profit-share withdrawal request.
+// ---------------------------------------------------------------------------
+model Payout {
+  id        String @id @default(cuid())
+  accountId String
+  userId    String
+
+  account Account @relation(fields: [accountId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  amountCents     Int
+  profitSplitPct  Float
+  status          String   @default("requested") // requested | approved | paid | rejected
+  note            String?
+
+  requestedAt DateTime @default(now())
+  processedAt DateTime?
+
+  @@index([accountId])
+  @@index([userId])
+}

@@ -1,0 +1,1220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>INDPIPS — Trader Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#070b16; --bg2:#0a1020; --panel:rgba(20,28,48,.66); --panel-solid:#121a2e;
+    --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.14);
+    --text:#eef2fb; --muted:#93a0bd; --faint:#5d6a87;
+    --blue:#2f6bff; --blue2:#4f8cff; --violet:#7c5cff; --teal:#19c39a;
+    --green:#22c98b; --red:#ff5d6c; --amber:#ffca45; --gold:#f2c14e;
+    --radius:18px; --radius-sm:12px;
+    --shadow:0 18px 50px -20px rgba(0,0,0,.7);
+    --grad:linear-gradient(135deg,var(--blue) 0%,var(--violet) 100%);
+    --grad-teal:linear-gradient(135deg,var(--teal),#34d4ff);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:'Plus Jakarta Sans',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+  /* animated background blobs */
+  .bgfx{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+  .blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:.5;animation:float 22s ease-in-out infinite}
+  .blob.b1{width:520px;height:520px;background:radial-gradient(circle,#2f6bff,transparent 70%);top:-160px;right:-120px}
+  .blob.b2{width:480px;height:480px;background:radial-gradient(circle,#7c5cff,transparent 70%);bottom:-180px;left:-120px;animation-delay:-7s}
+  .blob.b3{width:420px;height:420px;background:radial-gradient(circle,#19c39a,transparent 70%);top:40%;left:50%;animation-delay:-13s;opacity:.28}
+  @keyframes float{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(40px,-30px) scale(1.08)}66%{transform:translate(-30px,25px) scale(.96)}}
+  a{color:var(--blue2);text-decoration:none}
+  button{font-family:inherit;cursor:pointer}
+  .relayer{position:relative;z-index:1}
+  .pips{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+  /* ---------- LOGIN ---------- */
+  .login{min-height:100vh;display:grid;grid-template-columns:1.05fr .95fr}
+  @media(max-width:900px){.login{grid-template-columns:1fr}.login .brandpane{display:none}}
+  .brandpane{position:relative;padding:54px;display:flex;flex-direction:column;justify-content:space-between;
+    background:linear-gradient(150deg,#0c1530,#0a1f3a 55%,#0b132b);overflow:hidden}
+  .brandpane:before{content:"";position:absolute;inset:0;background:
+    radial-gradient(600px 300px at 80% 10%,rgba(79,140,255,.35),transparent 60%),
+    radial-gradient(500px 280px at 10% 90%,rgba(124,92,255,.30),transparent 60%)}
+  .bp-in{position:relative;z-index:1}
+  .bp-logo{display:flex;align-items:center;gap:12px;font-family:Sora;font-weight:800;font-size:22px;letter-spacing:.2px}
+  .mark{width:42px;height:42px;border-radius:12px;background:var(--grad);box-shadow:0 10px 30px -8px var(--blue);position:relative}
+  .mark:after{content:"";position:absolute;inset:9px;border-radius:6px;border:2.5px solid #fff;opacity:.92;
+    clip-path:polygon(0 70%,35% 35%,55% 55%,100% 8%,100% 30%,55% 78%,35% 58%,0 95%)}
+  .bp-hero{font-family:Sora;font-weight:800;font-size:42px;line-height:1.08;margin:26px 0 10px;letter-spacing:-.5px}
+  .bp-hero .g{background:linear-gradient(120deg,#7fd0ff,#9b8cff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .bp-sub{color:#c7d3ee;max-width:430px;line-height:1.6}
+  .trust{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+  .trust .t{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border:1px solid var(--line2);
+    padding:9px 13px;border-radius:999px;font-size:13px;font-weight:600;color:#dbe6ff;backdrop-filter:blur(6px)}
+  .trust .t svg{width:15px;height:15px}
+  .bp-stats{display:flex;gap:30px;margin-top:30px}
+  .bp-stats .s b{font-family:Sora;font-size:26px;display:block;background:var(--grad-teal);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .bp-stats .s span{font-size:12px;color:#9fb0d6}
+  .bp-foot{position:relative;z-index:1;color:#7e8cb0;font-size:12.5px;display:flex;align-items:center;gap:8px}
+
+  .formpane{display:flex;align-items:center;justify-content:center;padding:40px;background:var(--bg)}
+  .formcard{width:100%;max-width:400px;animation:rise .6s cubic-bezier(.2,.7,.3,1) both}
+  .formcard h2{font-family:Sora;font-size:24px;margin:0 0 4px}
+  .seg{display:flex;background:var(--panel-solid);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px;margin:16px 0 6px}
+  .seg button{flex:1;background:transparent;border:none;color:var(--muted);padding:10px;font-weight:700;border-radius:9px;transition:.25s}
+  .seg button.on{background:var(--grad);color:#fff;box-shadow:0 8px 20px -10px var(--blue)}
+  .help{color:var(--faint);font-size:12.5px;margin-bottom:8px;min-height:32px}
+  label.fld{display:block;margin:12px 0}
+  label.fld span{display:block;font-size:12px;color:var(--muted);margin-bottom:7px;font-weight:600}
+  input,select,textarea{background:var(--panel-solid);border:1px solid var(--line);color:var(--text);padding:12px 13px;border-radius:11px;font-size:14px;width:100%;transition:.2s;font-family:inherit}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue2);box-shadow:0 0 0 4px rgba(79,140,255,.16)}
+  textarea{resize:vertical}
+
+  .btn{background:var(--grad);border:none;color:#fff;padding:12px 16px;border-radius:12px;font-weight:700;position:relative;overflow:hidden;transition:transform .18s,box-shadow .18s;box-shadow:0 12px 26px -12px var(--blue)}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 18px 36px -14px var(--blue)}
+  .btn:active{transform:translateY(0)}
+  .btn:before{content:"";position:absolute;top:0;left:-120%;width:60%;height:100%;background:linear-gradient(110deg,transparent,rgba(255,255,255,.35),transparent);transition:.6s}
+  .btn:hover:before{left:130%}
+  .btn.sm{padding:9px 13px;font-size:13px}
+  .btn.ghost{background:var(--panel-solid);border:1px solid var(--line2);color:var(--text);box-shadow:none}
+  .btn.ghost:hover{border-color:var(--blue2)}
+  .err{color:var(--red);font-size:13px;margin-top:10px;min-height:16px}
+
+  /* ---------- APP SHELL ---------- */
+  .shell{display:grid;grid-template-columns:248px 1fr;min-height:100vh}
+  @media(max-width:820px){.shell{grid-template-columns:1fr}.side{display:none}}
+  .side{position:sticky;top:0;height:100vh;padding:22px 16px;background:linear-gradient(180deg,rgba(12,19,38,.9),rgba(8,12,24,.9));
+    border-right:1px solid var(--line);display:flex;flex-direction:column;gap:6px;backdrop-filter:blur(10px)}
+  .side .logo{display:flex;align-items:center;gap:11px;font-family:Sora;font-weight:800;font-size:18px;padding:6px 8px 18px}
+  .navitem{display:flex;align-items:center;gap:12px;padding:12px 13px;border-radius:12px;color:var(--muted);font-weight:600;border:1px solid transparent;transition:.2s;cursor:pointer}
+  .navitem svg{width:19px;height:19px;opacity:.85}
+  .navitem:hover{color:var(--text);background:rgba(255,255,255,.04)}
+  .navitem.active{color:#fff;background:linear-gradient(135deg,rgba(47,107,255,.22),rgba(124,92,255,.18));border-color:var(--line2);box-shadow:inset 0 0 0 1px rgba(79,140,255,.15)}
+  .navitem.active svg{opacity:1}
+  .side-foot{margin-top:auto;padding:14px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid var(--line);font-size:12px;color:var(--muted)}
+  .side-foot b{color:var(--text);display:block;margin-bottom:3px;font-size:12.5px}
+
+  .main{padding:24px 30px 60px;min-width:0}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px}
+  .topbar h1{font-family:Sora;font-size:22px;margin:0}
+  .topbar .sub{color:var(--muted);font-size:13px;margin-top:2px}
+  .top-right{display:flex;align-items:center;gap:10px}
+  .chip{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--muted);background:var(--panel-solid);border:1px solid var(--line);padding:8px 12px;border-radius:999px}
+  .chip svg{width:14px;height:14px}
+  .live{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(34,201,139,.6);animation:pulse 1.8s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(34,201,139,.5)}70%{box-shadow:0 0 0 9px rgba(34,201,139,0)}100%{box-shadow:0 0 0 0 rgba(34,201,139,0)}}
+  .curtog{display:flex;background:var(--panel-solid);border:1px solid var(--line);border-radius:999px;overflow:hidden}
+  .curtog button{background:transparent;border:none;color:var(--muted);padding:7px 12px;font-weight:700;font-size:12.5px}
+  .curtog button.on{background:var(--grad);color:#fff}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;backdrop-filter:blur(14px);box-shadow:var(--shadow);transition:transform .2s,border-color .2s}
+  .grid{display:grid;gap:16px}
+  .cols-4{grid-template-columns:repeat(4,1fr)} .cols-3{grid-template-columns:repeat(3,1fr)} .cols-2{grid-template-columns:repeat(2,1fr)}
+  @media(max-width:980px){.cols-4{grid-template-columns:1fr 1fr}}
+  @media(max-width:760px){.cols-4,.cols-3,.cols-2{grid-template-columns:1fr}}
+  .lift:hover{transform:translateY(-4px);border-color:var(--line2)}
+  .clickable{cursor:pointer}
+
+  .kpi .label{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;display:flex;align-items:center;gap:7px}
+  .kpi .val{font-family:Sora;font-size:27px;font-weight:800;margin-top:9px;letter-spacing:-.5px}
+  .kpi .val.grad{background:var(--grad-teal);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .dot{width:9px;height:9px;border-radius:3px;background:var(--grad)}
+  .muted{color:var(--muted)} .faint{color:var(--faint)} .small{font-size:12.5px}
+  .row{display:flex;align-items:center;gap:10px} .between{justify-content:space-between}
+  .pos{color:var(--green)} .neg{color:var(--red)}
+
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:11px 10px;border-bottom:1px solid var(--line)}
+  th{color:var(--faint);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+  tbody tr{transition:.15s} tbody tr:hover{background:rgba(255,255,255,.03)}
+
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid transparent}
+  .b-funded{background:rgba(34,201,139,.14);color:var(--green);border-color:rgba(34,201,139,.3)}
+  .b-breached{background:rgba(255,93,108,.14);color:var(--red);border-color:rgba(255,93,108,.3)}
+  .b-phase{background:rgba(79,140,255,.14);color:var(--blue2);border-color:rgba(79,140,255,.3)}
+  .b-pending{background:rgba(147,160,189,.12);color:var(--muted);border-color:var(--line2)}
+  .badge .d{width:7px;height:7px;border-radius:50%;background:currentColor}
+
+  .pill{font-size:11px;padding:3px 10px;border-radius:999px;border:1px solid var(--line2);color:var(--muted);font-weight:600}
+  .pill.ok{color:var(--green);border-color:rgba(34,201,139,.4)}
+  .bar{height:10px;background:rgba(255,255,255,.06);border-radius:999px;overflow:hidden}
+  .bar>i{display:block;height:100%;background:var(--grad);border-radius:999px;transition:width 1s cubic-bezier(.2,.7,.3,1);box-shadow:0 0 14px rgba(79,140,255,.5)}
+  .enf-auto{color:var(--green)} .enf-manual{color:var(--amber)} .enf-hybrid{color:var(--blue2)}
+  .price{font-family:Sora;font-weight:800;font-size:20px}
+  .planhead{font-family:Sora;font-weight:700;font-size:16px}
+  .hide{display:none}
+  .view-anim>*{animation:rise .5s cubic-bezier(.2,.7,.3,1) both}
+  .view-anim>*:nth-child(2){animation-delay:.05s}.view-anim>*:nth-child(3){animation-delay:.1s}.view-anim>*:nth-child(4){animation-delay:.15s}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  .spark{width:100%;height:38px;display:block}
+  .ring-wrap{position:relative;width:120px;height:120px;margin:0 auto}
+  .ring-wrap .lbl{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .ring-wrap .lbl b{font-family:Sora;font-size:22px}
+  .scrollx{overflow-x:auto}
+  /* tabs */
+  .tabs{display:inline-flex;background:var(--panel-solid);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px;margin-bottom:18px;flex-wrap:wrap}
+  .tabs button{background:transparent;border:none;color:var(--muted);padding:9px 16px;font-weight:700;border-radius:9px;transition:.2s}
+  .tabs button.on{background:var(--grad);color:#fff;box-shadow:0 8px 20px -10px var(--blue)}
+  /* how it works */
+  .howto{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+  @media(max-width:760px){.howto{grid-template-columns:1fr}}
+  .step{display:flex;gap:13px;align-items:flex-start}
+  .step .num{width:34px;height:34px;border-radius:10px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-family:Sora;font-weight:800;flex:none}
+  .step b{display:block;margin-bottom:3px}
+  /* comparison table */
+  .cmp{width:100%;border-collapse:separate;border-spacing:0;font-size:14px}
+  .cmp th,.cmp td{padding:13px 14px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap}
+  .cmp th:first-child,.cmp td:first-child{text-align:left;color:var(--muted);font-weight:600;position:sticky;left:0;background:var(--panel-solid);z-index:1}
+  .cmp thead th{font-family:Sora;font-size:16px;color:var(--text)}
+  .cmp thead th small{display:block;color:var(--faint);font-size:11px;font-weight:500;letter-spacing:.04em}
+  .cmp tr:hover td{background:rgba(255,255,255,.03)}
+  .cmp .accent{color:var(--blue2);font-weight:700}
+  /* objectives */
+  .obj{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+  .obj:last-child{border-bottom:none}
+  .obj .ck{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex:none}
+  .ck.pass{background:rgba(34,201,139,.16);color:var(--green)} .ck.fail{background:rgba(255,93,108,.16);color:var(--red)} .ck.wait{background:rgba(147,160,189,.14);color:var(--muted)}
+  .obj .ol b{display:block;font-size:14px} .obj .ol span{font-size:12px;color:var(--faint)}
+  .obj .ov{text-align:right;font-size:13px}
+  /* stat boxes */
+  .statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  @media(max-width:760px){.statgrid{grid-template-columns:1fr 1fr}}
+  .statbox{text-align:center;padding:14px 10px;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:14px}
+  .statbox b{font-family:Sora;font-size:20px;display:block} .statbox span{font-size:11.5px;color:var(--muted)}
+  /* gauges */
+  .gauge{margin:10px 0}
+  .gauge .gl{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px}
+  .gaugebar{height:12px;border-radius:999px;background:rgba(255,255,255,.06);overflow:hidden}
+  .gaugebar>i{display:block;height:100%;border-radius:999px;transition:width .9s cubic-bezier(.2,.7,.3,1)}
+  /* calculator */
+  .calc-out{background:linear-gradient(135deg,rgba(47,107,255,.1),rgba(124,92,255,.08));border:1px solid rgba(79,140,255,.25);border-radius:14px;padding:16px;margin-top:6px}
+  .calc-out .big{font-family:Sora;font-size:28px;font-weight:800;background:var(--grad-teal);-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1.1}
+  .calc-out .sub{color:var(--muted);font-size:12.5px;margin-top:4px}
+  .orow{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px dashed var(--line);font-size:13.5px}
+  .orow:last-child{border-bottom:none} .orow b{font-family:Sora}
+  .seg2{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+  .seg2 button{background:var(--panel-solid);border:1px solid var(--line);color:var(--muted);padding:7px 12px;border-radius:9px;font-weight:600;font-size:12.5px}
+  .seg2 button.on{background:var(--grad);color:#fff;border-color:transparent}
+  .warn{color:var(--amber)}
+  /* news banner */
+  .newsbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px;padding:12px 16px;border-radius:14px;
+    background:linear-gradient(135deg,rgba(255,93,108,.16),rgba(255,202,69,.12));border:1px solid rgba(255,93,108,.3)}
+  .nb-dot{width:9px;height:9px;border-radius:50%;background:var(--red);box-shadow:0 0 0 0 rgba(255,93,108,.6);animation:pulse 1.6s infinite}
+  /* live payout feed */
+  .pf-item{display:flex;align-items:center;gap:12px;padding:11px 2px;border-bottom:1px solid var(--line)}
+  .pf-item:last-child{border-bottom:none}
+  .pf-av{width:38px;height:38px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-weight:800;flex:none;font-family:Sora}
+  .pf-amt{font-family:Sora;font-weight:800;color:var(--green)}
+  .pf-new{animation:pfin .7s ease both}
+  @keyframes pfin{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+  /* modal */
+  .modal-bg{position:fixed;inset:0;z-index:60;background:rgba(4,7,14,.72);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:20px;animation:fadein .2s ease}
+  .modal{width:100%;max-width:440px;background:var(--panel-solid);border:1px solid var(--line2);border-radius:18px;padding:22px;box-shadow:var(--shadow);animation:rise .3s cubic-bezier(.2,.7,.3,1) both}
+  @keyframes fadein{from{opacity:0}to{opacity:1}}
+  /* trader level */
+  .lvlhead{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
+  .lvl-badge{width:58px;height:58px;border-radius:16px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:28px;flex:none;box-shadow:0 12px 26px -10px var(--violet)}
+  .lvlkpis{display:flex;gap:28px;text-align:right;flex-wrap:wrap}
+  .lvlnum{font-family:Sora;font-weight:800;font-size:21px}
+  .lvl-cur{border-color:var(--blue2);box-shadow:0 0 0 1px var(--blue2),var(--shadow)}
+  /* faq accordion */
+  details.faq{border:1px solid var(--line);border-radius:12px;margin-bottom:10px;background:var(--panel-solid);overflow:hidden}
+  details.faq summary{cursor:pointer;padding:14px 16px;font-weight:700;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px}
+  details.faq summary::-webkit-details-marker{display:none}
+  details.faq summary::after{content:'+';color:var(--muted);font-size:20px;line-height:1}
+  details.faq[open] summary::after{content:'–'}
+  details.faq[open] summary{color:var(--blue2)}
+  details.faq .ans{padding:0 16px 16px;color:var(--muted);font-size:14px;line-height:1.65}
+</style>
+</head>
+<body>
+<div class="bgfx"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+
+<!-- ============ LOGIN ============ -->
+<div id="auth" class="relayer">
+  <div class="login">
+    <div class="brandpane">
+      <div class="bp-in">
+        <div class="bp-logo"><span style="color:#ff9933">IND</span><span class="pips">PIPS</span></div>
+        <div class="bp-hero">Trade. Get Funded.<br><span class="g">Get Paid.</span></div>
+        <div class="bp-sub">India's trader-first funded program. Clear rules, transparent dashboards, and fast payouts — built so you always know exactly where you stand.</div>
+        <div class="trust">
+          <div class="t"><svg viewBox="0 0 24 24" fill="none" stroke="#7fd0ff" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/><path d="M9 12l2 2 4-4" stroke="#22c98b"/></svg> Bank-grade security</div>
+          <div class="t"><svg viewBox="0 0 24 24" fill="none" stroke="#22c98b" stroke-width="2"><path d="M3 12h18M12 3v18"/></svg> Fast ₹ payouts</div>
+          <div class="t"><svg viewBox="0 0 24 24" fill="none" stroke="#ffca45" stroke-width="2"><path d="M12 2l3 6 6 .5-4.5 4 1.5 6-6-3.5L6 18.5 7.5 12.5 3 8.5 9 8z"/></svg> KYC verified</div>
+        </div>
+        <div class="bp-stats">
+          <div class="s"><b id="st1">0</b><span>Funded traders</span></div>
+          <div class="s"><b id="st2">0</b><span>Paid out</span></div>
+          <div class="s"><b id="st3">0</b><span>Avg. payout time</span></div>
+        </div>
+      </div>
+      <div class="bp-foot"><span class="live"></span> Systems operational · SSL secured</div>
+    </div>
+    <div class="formpane">
+      <div class="formcard">
+        <h2>Welcome back</h2>
+        <div class="muted small">Sign in to your trader dashboard</div>
+        <div class="seg">
+          <button id="mDemo" class="on" onclick="setMode('demo')">Demo (offline)</button>
+          <button id="mLive" onclick="setMode('live')">Live API</button>
+        </div>
+        <div class="help" id="modeHelp"></div>
+        <div id="liveFields" class="hide"><label class="fld"><span>API base URL</span><input id="apiBase" value="http://localhost:4000" /></label></div>
+        <label class="fld"><span>Email</span><input id="email" value="trader@apexfunding.test" /></label>
+        <label class="fld"><span>Password</span><input id="password" type="password" value="trader1234" /></label>
+        <div class="row between" style="margin-top:14px">
+          <button class="btn" style="flex:1" onclick="doLogin()">Log in</button>
+          <button class="btn ghost" onclick="doRegister()">Register</button>
+        </div>
+        <div class="err" id="authErr"></div>
+        <div class="faint small" style="margin-top:14px;text-align:center">🔒 Your data stays in your browser in Demo mode</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app" class="relayer hide">
+  <div class="shell">
+    <aside class="side">
+      <div class="logo"><span style="color:#ff9933">IND</span><span class="pips">PIPS</span></div>
+      <div class="navitem active" data-view="accounts" onclick="go('accounts')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg> My Accounts</div>
+      <div class="navitem" data-view="plans" onclick="go('plans')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18M3 12h18M3 17h12"/></svg> Buy Challenge</div>
+      <div class="navitem" data-view="calc" onclick="go('calc')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 10h2M12 10h4M8 14h2M12 14h4M8 18h2M12 18h4"/></svg> Calculator</div>
+      <div class="navitem" data-view="markets" onclick="go('markets')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 7-7"/><path d="M14 7h6v6"/></svg> Markets &amp; News</div>
+      <div class="navitem" data-view="livepayouts" onclick="go('livepayouts')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9v6M18 9v6"/></svg> Live Payouts</div>
+      <div class="navitem" data-view="affiliate" onclick="go('affiliate')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/><path d="M17 8h4M19 6v4"/></svg> Affiliate</div>
+      <div class="navitem" data-view="leaderboard" onclick="go('leaderboard')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg> Leaderboard</div>
+      <div class="navitem" data-view="giveaway" onclick="go('giveaway')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M3 8h18M12 8v13M12 8s-2-5-5-5-2 5 5 5M12 8s2-5 5-5 2 5-5 5"/></svg> Giveaway</div>
+      <div class="navitem" data-view="rules" onclick="go('rules')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/></svg> Rules</div>
+      <div class="navitem" data-view="faq" onclick="go('faq')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1 .9-1 1.7"/><circle cx="12" cy="16.5" r=".6" fill="currentColor"/></svg> FAQ</div>
+      <div class="navitem" data-view="contact" onclick="go('contact')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M4 7l8 6 8-6"/></svg> Contact Us</div>
+      <div class="side-foot"><b>🔒 Secure session</b>Verified payouts · KYC compliant · 256-bit SSL</div>
+    </aside>
+    <main class="main">
+      <div class="topbar">
+        <div><h1 id="pageTitle">My Accounts</h1><div class="sub" id="pageSub"></div></div>
+        <div class="top-right">
+          <div class="curtog"><button id="cUSD" class="on" onclick="setCur('USD')">$</button><button id="cINR" onclick="setCur('INR')">₹</button></div>
+          <span class="chip"><span class="live"></span> <span id="modeChip"></span></span>
+          <button class="btn ghost sm" onclick="openGift()">🎁 Gift</button>
+          <button class="btn ghost sm" onclick="logout()">Logout</button>
+        </div>
+      </div>
+      <div id="newsAlert"></div>
+      <div id="view"></div>
+    </main>
+  </div>
+  <div id="modalRoot"></div>
+</div>
+
+<script>
+/* ===================== STORE ===================== */
+const store={
+  get token(){return localStorage.getItem('pf_token')}, set token(v){v?localStorage.setItem('pf_token',v):localStorage.removeItem('pf_token')},
+  get api(){return localStorage.getItem('pf_api')||'http://localhost:4000'}, set api(v){localStorage.setItem('pf_api',v)},
+  get user(){try{return JSON.parse(localStorage.getItem('pf_user'))}catch{return null}}, set user(v){v?localStorage.setItem('pf_user',JSON.stringify(v)):localStorage.removeItem('pf_user')},
+  get mode(){return localStorage.getItem('pf_mode')||'demo'}, set mode(v){localStorage.setItem('pf_mode',v)},
+  get cur(){return localStorage.getItem('pf_cur')||'USD'}, set cur(v){localStorage.setItem('pf_cur',v)},
+};
+function setMode(m){store.mode=m;
+  document.getElementById('mDemo').classList.toggle('on',m==='demo');
+  document.getElementById('mLive').classList.toggle('on',m==='live');
+  document.getElementById('liveFields').classList.toggle('hide',m==='demo');
+  document.getElementById('modeHelp').textContent=m==='demo'
+    ?'Runs fully in your browser with the real rules and a mock trade feed. Nothing to install.'
+    :'Connect to your running backend (npm run dev), then sign in with your account.';
+}
+/* currency */
+const CUR={code:'USD',rate:1,sym:'$'};
+function setCur(c){store.cur=c; if(c==='INR'){CUR.code='INR';CUR.rate=83.2;CUR.sym='₹';}else{CUR.code='USD';CUR.rate=1;CUR.sym='$';}
+  const u=document.getElementById('cUSD'),i=document.getElementById('cINR'); if(u&&i){u.classList.toggle('on',c==='USD');i.classList.toggle('on',c==='INR');}
+  if(!document.getElementById('app').classList.contains('hide')) go(CURRENT.view,CURRENT.arg);
+}
+const money=n=>CUR.sym+(Number(n||0)*CUR.rate).toLocaleString(CUR.code==='INR'?'en-IN':'en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+/* ===================== API DISPATCH ===================== */
+async function api(path,opts={}){
+  if(store.mode==='demo') return DEMO.handle(path,opts);
+  const headers={'Content-Type':'application/json',...(opts.headers||{})};
+  if(store.token) headers['Authorization']='Bearer '+store.token;
+  const res=await fetch(store.api+path,{...opts,headers});
+  const text=await res.text(); let data; try{data=text?JSON.parse(text):null}catch{data=text}
+  if(!res.ok) throw new Error((data&&data.error&&(typeof data.error==='string'?data.error:JSON.stringify(data.error)))||('HTTP '+res.status));
+  return data;
+}
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function statusBadge(s){const m={funded:'b-funded',breached:'b-breached',phase_1:'b-phase',phase_2:'b-phase',pending:'b-pending'};
+  return `<span class="badge ${m[s]||'b-pending'}"><span class="d"></span>${esc((s||'').replace('_',' '))}</span>`;}
+
+/* ===================== motion helpers ===================== */
+function animateCounts(scope){
+  (scope||document).querySelectorAll('[data-count]').forEach(el=>{
+    const to=parseFloat(el.dataset.count)||0, fmt=el.dataset.fmt||'plain', dur=700, t0=performance.now();
+    const sign=el.dataset.sign==='1';
+    function step(t){const k=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-k,3), v=to*e;
+      el.textContent= fmt==='money'?money(v): fmt==='pct'?((sign&&v>=0?'+':'')+v.toFixed(2)+'%') : Math.round(v).toLocaleString('en-IN');
+      if(k<1) requestAnimationFrame(step);}
+    requestAnimationFrame(step);
+  });
+}
+function spark(values,color){
+  if(!values||values.length<2) return '';
+  const w=240,h=38,min=Math.min(...values),max=Math.max(...values),rng=(max-min)||1;
+  const pts=values.map((v,i)=>[i/(values.length-1)*w, h-((v-min)/rng)*(h-6)-3]);
+  const d=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  const id='g'+Math.random().toString(36).slice(2,7);
+  const up=values[values.length-1]>=values[0]; const c=color||(up?'#22c98b':'#ff5d6c');
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c}" stop-opacity=".35"/><stop offset="1" stop-color="${c}" stop-opacity="0"/></linearGradient></defs>
+    <path d="${d} L ${w} ${h} L 0 ${h} Z" fill="url(#${id})"/>
+    <path d="${d}" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+function ring(pct,label){
+  const r=52,c=2*Math.PI*r,off=c*(1-Math.max(0,Math.min(1,pct/100)));
+  return `<div class="ring-wrap"><svg width="120" height="120" viewBox="0 0 120 120">
+    <defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2f6bff"/><stop offset="1" stop-color="#7c5cff"/></linearGradient></defs>
+    <circle cx="60" cy="60" r="${r}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="10"/>
+    <circle cx="60" cy="60" r="${r}" fill="none" stroke="url(#rg)" stroke-width="10" stroke-linecap="round"
+      stroke-dasharray="${c}" stroke-dashoffset="${c}" transform="rotate(-90 60 60)"
+      style="transition:stroke-dashoffset 1.1s cubic-bezier(.2,.7,.3,1)" data-ringoff="${off}"/></svg>
+    <div class="lbl"><b>${pct.toFixed(0)}%</b><span class="muted small">${label}</span></div></div>`;
+}
+function runRings(){document.querySelectorAll('[data-ringoff]').forEach(c=>{requestAnimationFrame(()=>{c.style.strokeDashoffset=c.getAttribute('data-ringoff')})})}
+
+/* ===================== DEMO ENGINE ===================== */
+const DEMO=(()=>{
+  const KEY='pf_demo_state';
+  const sizes=[5000,10000,25000,50000,100000], instantSizes=[5000,10000,25000,50000,100000,200000];
+  const price={5000:4900,10000:9900,25000:19900,50000:29900,100000:49900,200000:99900}; const k=n=>n/1000;
+  function oneStep(s){return{id:'1s'+s,name:`1-Step ${k(s)}K`,accountSize:s,priceCents:price[s],phases:1,phase1TargetPct:6,phase2TargetPct:null,dailyDdPct:4,maxDdPct:6,maxDdTrailing:true,ddBasis:'balance',ddRefresh:'eod',ddBoundaryUtcMin:1260,weekendTradingAllowed:false,maxTradeFloatingLossPct:2,payoutMinProfitableDays:7,payoutMinDailyProfitPct:0.25,profitSplitPct:80};}
+  function twoStep(s){return{...oneStep(s),id:'2s'+s,name:`2-Step ${k(s)}K`,phases:2,phase1TargetPct:4,phase2TargetPct:6,payoutMinProfitableDays:5};}
+  function instant(s){return{id:'in'+s,name:`Instant ${k(s)}K`,accountSize:s,priceCents:price[s],phases:0,phase1TargetPct:null,phase2TargetPct:null,dailyDdPct:null,maxDdPct:5,maxDdTrailing:true,ddBasis:'equity',ddRefresh:'realtime',ddBoundaryUtcMin:1260,weekendTradingAllowed:true,maxTradeFloatingLossPct:null,payoutMinProfitableDays:4,payoutMinDailyProfitPct:0.25,profitSplitPct:80};}
+  const PLANS=[...sizes.map(oneStep),...sizes.map(twoStep),...instantSizes.map(instant)];
+  const PROHIBITED=[
+    {id:'gambling_behavior',name:'Gambling Behavior (Risk & Margin)',description:'Overleveraging or high-risk trades without a stop-loss. Risk capped at 3%; margin capped at 70% cumulative.',enforcement:'auto',thresholds:{maxRiskPct:3,maxMarginPct:70}},
+    {id:'all_in_one',name:'All-in-One Trading',description:'Concentrating the account outcome into a single large position/idea.',enforcement:'manual'},
+    {id:'quick_strike',name:'Quick Strike Method',description:'High share of profit from positions closed within 30 seconds of opening.',enforcement:'auto',thresholds:{tradeSeconds:30,warnPct:20,violationPct:30}},
+    {id:'high_frequency_trading',name:'High-Frequency Trading (HFT)',description:'Bots executing excessive trades in ms–s to exploit micro moves; strains servers.',enforcement:'hybrid'},
+    {id:'copy_trading_across_accounts',name:'Copy Trading Across Others’ Accounts',description:'Copying between accounts not owned by the same person; selling signal/pass services.',enforcement:'manual'},
+    {id:'group_hedging',name:'Hedging / Group Hedging Across Accounts',description:'Opposite trades on the same asset across multiple accounts. Hedging allowed only within one account.',enforcement:'manual'},
+    {id:'arbitrage',name:'Arbitrage Trading (any form)',description:'Exploiting price discrepancies/time lags across markets for risk-free profit.',enforcement:'manual'},
+    {id:'tick_scalping',name:'Tick Scalping',description:'High volume of trades exploiting the smallest tick movements, straining liquidity.',enforcement:'manual'},
+    {id:'grid_trading',name:'Grid Trading',description:'Laddered buy/sell orders above and below market; artificial activity and tail risk.',enforcement:'manual'},
+    {id:'market_settlement_trading',name:'Market Settlement Trading',description:'Profiting disproportionately during the low-liquidity settlement window (00:00–02:00 server).',enforcement:'auto',thresholds:{windowServerStart:'00:00',windowServerEnd:'02:00'}},
+    {id:'latency_trading',name:'Latency Trading',description:'Trading on delayed data/execution delays for guaranteed profit.',enforcement:'manual'},
+    {id:'account_rolling',name:'Account Rolling',description:'Buying many accounts and sacrificing some to pass others by probability.',enforcement:'hybrid'},
+    {id:'one_sided_betting',name:'One-Sided Betting',description:'Concentrated directional exposure so outcome depends on a single idea.',enforcement:'manual'},
+    {id:'hyperactivity',name:'Hyperactivity',description:'Excessive trading/order modifications flooding the server with messages.',enforcement:'auto',thresholds:{tradesPerDay:200,messagesPerDay:2000}},
+    {id:'demo_server_error_exploit',name:'Exploiting Demo Server Errors',description:'Using platform/data freezing from demo errors as an unfair advantage.',enforcement:'manual'},
+    {id:'low_liquidity_profit_guarantee',name:'Guaranteed Profit in Low-Liquidity',description:'Exploiting the session transition to evade normal executions.',enforcement:'manual'},
+    {id:'account_device_sharing',name:'Account / Device Sharing',description:'Sharing or reselling accounts, or sharing devices with other traders.',enforcement:'manual'},
+  ];
+  function load(){try{return JSON.parse(localStorage.getItem(KEY))||{accounts:[]}}catch{return{accounts:[]}}}
+  function save(s){localStorage.setItem(KEY,JSON.stringify(s))}
+  const uid=()=>Math.random().toString(36).slice(2,10); const r2=n=>Math.round(n*100)/100;
+  function measured(a,basis){return basis==='equity'?a.equity:a.balance}
+  function evaluate(a,p){const v=[],base=measured(a,p.ddBasis);
+    if(p.dailyDdPct!=null&&a.dayOpenValue>0){const dd=(a.dayOpenValue-base)/a.dayOpenValue*100;if(dd>p.dailyDdPct)v.push({rule:'daily_drawdown',message:`Daily drawdown ${r2(dd)}% exceeded ${p.dailyDdPct}%`,hard:true});}
+    const mb=p.maxDdTrailing?a.peakValue:a.startingBalance,mdd=(mb-base)/mb*100;
+    if(mdd>p.maxDdPct)v.push({rule:'max_drawdown',message:`Max drawdown ${r2(mdd)}% exceeded ${p.maxDdPct}%${p.maxDdTrailing?' trailing':''}`,hard:true});
+    if(!p.weekendTradingAllowed&&a.hasWeekendTrade)v.push({rule:'weekend_trading',message:'Weekend trade not allowed',hard:true});
+    if(p.maxTradeFloatingLossPct!=null&&a.worstFloat>p.maxTradeFloatingLossPct)v.push({rule:'trade_floating_loss',message:`Single-trade floating loss ${r2(a.worstFloat)}% exceeded ${p.maxTradeFloatingLossPct}%`,hard:true});
+    if(a.status==='breached')return{status:'breached',phase:a.phase,violations:[],target:false};
+    if(v.some(x=>x.hard))return{status:'breached',phase:a.phase,violations:v,target:false};
+    if(a.status==='funded')return{status:'funded',phase:a.phase,violations:v,target:false};
+    const tgt=a.phase===2?p.phase2TargetPct:p.phase1TargetPct,tv=tgt!=null?a.startingBalance*(1+tgt/100):null,reached=tv!=null&&base>=tv;
+    if(reached){const np=a.phase+1;if(np>p.phases)return{status:'funded',phase:a.phase,violations:v,target:true};return{status:np===2?'phase_2':'phase_1',phase:np,violations:v,target:true};}
+    let ns=a.status;if(a.status==='pending')ns=p.phases===0?'funded':'phase_1';
+    return{status:ns,phase:a.phase,violations:v,target:false};}
+  function lastBoundary(now,bmin){const b=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate(),0,0,0));b.setUTCMinutes(bmin);if(b.getTime()>now.getTime())b.setUTCDate(b.getUTCDate()-1);return b;}
+  const SYM=['EURUSD','GBPUSD','XAUUSD','US30','NAS100'];
+  function syncOne(a){
+    if(a.status==='breached')return; const p=a.plan;
+    let t=(a.simTime||(Date.now()-9*86400000))+86400000; let d=new Date(t);
+    if(!p.weekendTradingAllowed){while(d.getUTCDay()===0||d.getUTCDay()===6){t+=86400000;d=new Date(t);}} a.simTime=t;
+    a.dayOpenValue=p.ddBasis==='equity'?a.equity:a.balance;
+    const n=1+Math.floor(Math.random()*3);
+    for(let i=0;i<n;i++){const profit=Math.round((Math.random()*0.011-0.004)*a.startingBalance);a.balance=r2(a.balance+profit);
+      a.trades.unshift({id:uid(),symbol:SYM[Math.floor(Math.random()*SYM.length)],side:Math.random()>.5?'buy':'sell',volume:r2(0.1+Math.random()*1.9),profit,commission:0,swap:0,closedAt:new Date(t+i*60000).toISOString(),openedAt:new Date(t+i*60000-1800000).toISOString()});}
+    a.trades=a.trades.slice(0,120);
+    let floating=0,worst=0; if(Math.random()>0.5){const f=Math.round((Math.random()*0.03-0.022)*a.startingBalance);floating=f;if(f<0)worst=(-f/a.balance)*100;}
+    a.equity=r2(a.balance+floating); a.worstFloat=r2(worst);
+    const basis=p.ddBasis==='equity'?a.equity:a.balance; a.peakValue=Math.max(a.peakValue,basis);
+    a.lastBoundary=lastBoundary(d,p.ddBoundaryUtcMin).getTime();
+    a.tradingDays=new Set(a.trades.map(x=>x.closedAt.slice(0,10))).size;
+    const res=evaluate(a,p); a.status=res.status; a.phase=res.phase;
+    if(res.target&&a.status==='funded'&&!a.fundedAt)a.fundedAt=new Date().toISOString();
+    for(const vio of res.violations)a.violations.unshift({...vio,createdAt:new Date().toISOString()}); a.violations=a.violations.slice(0,20);
+    if(a.status==='breached'&&!a.breachReason)a.breachReason=(res.violations.find(x=>x.hard)||{}).message||'Rule breached';
+    const dd=p.dailyDdPct!=null&&a.dayOpenValue>0?Math.max(0,(a.dayOpenValue-basis)/a.dayOpenValue*100):0;
+    const ob=p.maxDdTrailing?a.peakValue:a.startingBalance, odd=Math.max(0,(ob-basis)/ob*100);
+    a.snapshots.unshift({balance:a.balance,equity:a.equity,dailyDrawdown:r2(dd),overallDrawdown:r2(odd),profitPct:r2((a.balance-a.startingBalance)/a.startingBalance*100),createdAt:new Date().toISOString()});
+    a.snapshots=a.snapshots.slice(0,120);
+  }
+  function eligibility(a){const p=a.plan,perDay={};
+    for(const t of a.trades){const key=lastBoundary(new Date(t.closedAt),p.ddBoundaryUtcMin).toISOString().slice(0,10);perDay[key]=(perDay[key]||0)+t.profit+t.commission+t.swap;}
+    const thr=a.startingBalance*(p.payoutMinDailyProfitPct/100); let days=0; for(const k in perDay) if(perDay[k]>=thr) days++;
+    const profit=a.equity-a.startingBalance, share=Math.max(0,profit)*(p.profitSplitPct/100);
+    return{eligible:a.status==='funded'&&days>=p.payoutMinProfitableDays&&profit>0,profitableDays:days,requiredDays:p.payoutMinProfitableDays,minDailyProfitPct:p.payoutMinDailyProfitPct,profit,maxWithdrawableCents:Math.floor(share*100)};}
+  function stripHeavy(a){const{trades,snapshots,violations,...rest}=a;return{...rest,sparkEquity:(a.snapshots||[]).slice(0,24).reverse().map(s=>s.equity)};}
+  function handle(path,opts){
+    const body=opts.body?JSON.parse(opts.body):{}; const s=load();
+    const reply=v=>Promise.resolve(JSON.parse(JSON.stringify(v))); const fail=m=>Promise.reject(new Error(m));
+    if(path==='/auth/login'||path==='/auth/register'){store.user={id:'demo',email:body.email||'demo@trader',role:'trader'};return reply({token:'demo-token',user:store.user});}
+    if(path==='/plans') return reply(PLANS);
+    if(path==='/prohibited-activities') return reply(PROHIBITED);
+    if(path==='/accounts'&&(!opts.method||opts.method==='GET')) return reply(s.accounts.map(stripHeavy));
+    if(path==='/accounts'&&opts.method==='POST'){const plan=PLANS.find(p=>p.id===body.planId);if(!plan)return fail('Plan not found');
+      const a={id:uid(),plan,planId:plan.id,mt5Source:body.mt5Source||'mock',mt5Login:'MOCK-'+Math.floor(Math.random()*1e6),status:plan.phases===0?'funded':'phase_1',phase:1,startingBalance:plan.accountSize,balance:plan.accountSize,equity:plan.accountSize,peakValue:plan.accountSize,dayOpenValue:plan.accountSize,lastBoundary:0,simTime:Date.now()-9*86400000,worstFloat:0,hasWeekendTrade:false,tradingDays:0,trades:[],snapshots:[],violations:[],createdAt:new Date().toISOString(),breachReason:null,fundedAt:plan.phases===0?new Date().toISOString():null};
+      s.accounts.unshift(a);save(s);return reply(stripHeavy(a));}
+    const m=path.match(/^\/accounts\/([^/]+)(\/sync)?$/);
+    if(m){const a=s.accounts.find(x=>x.id===m[1]);if(!a)return fail('Not found');
+      if(m[2]==='/sync'){syncOne(a);save(s);return reply({accountId:a.id,status:a.status,changed:true});}return reply(a);}
+    const e=path.match(/^\/payouts\/eligibility\/([^/]+)$/);
+    if(e){const a=s.accounts.find(x=>x.id===e[1]);if(!a)return fail('Not found');return reply(eligibility(a));}
+    if(path==='/payouts'&&opts.method==='POST'){const a=s.accounts.find(x=>x.id===body.accountId);if(!a)return fail('Account not found');
+      if(a.status!=='funded')return fail('Only funded accounts can request payouts'); const el=eligibility(a);
+      if(!el.eligible)return fail(`Not yet eligible: ${el.profitableDays}/${el.requiredDays} profitable days required`);
+      if(body.amountCents>el.maxWithdrawableCents)return fail('Amount exceeds your share');
+      const amt=body.amountCents/100; a.balance=r2(a.balance-amt); a.equity=r2(a.equity-amt);
+      s.payouts=s.payouts||[]; const rec={id:uid(),accountId:a.id,plan:a.plan.name,amountCents:body.amountCents,status:'paid',at:new Date().toISOString()}; s.payouts.unshift(rec); save(s);
+      return reply(rec);}
+    if(path==='/payouts') return reply(s.payouts||[]);
+    return fail('Demo endpoint not found: '+path);
+  }
+  return {handle,reset:()=>localStorage.removeItem(KEY)};
+})();
+
+/* ===================== AUTH ===================== */
+async function doLogin(){
+  if(store.mode==='live') store.api=document.getElementById('apiBase').value.trim().replace(/\/$/,'');
+  try{const r=await api('/auth/login',{method:'POST',body:JSON.stringify({email:document.getElementById('email').value,password:document.getElementById('password').value})});
+    store.token=r.token;store.user=r.user;enterApp();}catch(e){document.getElementById('authErr').textContent=e.message}
+}
+async function doRegister(){
+  if(store.mode==='live') store.api=document.getElementById('apiBase').value.trim().replace(/\/$/,'');
+  try{const r=await api('/auth/register',{method:'POST',body:JSON.stringify({email:document.getElementById('email').value,password:document.getElementById('password').value})});
+    store.token=r.token;store.user=r.user;enterApp();}catch(e){document.getElementById('authErr').textContent=e.message}
+}
+function logout(){store.token=null;store.user=null;location.reload()}
+function enterApp(){
+  document.getElementById('auth').classList.add('hide');
+  document.getElementById('app').classList.remove('hide');
+  document.getElementById('modeChip').textContent=store.mode==='demo'?'Demo mode':'Live';
+  PAYOUTFEED.start();
+  go('accounts');
+}
+
+/* ===================== ROUTER ===================== */
+let chart=null; const CURRENT={view:'accounts',arg:null};
+const TITLES={accounts:['My Accounts','Track your challenges and funded accounts'],plans:['Buy a Challenge','Compare programs and get funded'],calc:['Risk & Margin Calculator','Size every trade with confidence'],markets:['Markets & News','Economic calendar, sentiment & speech alerts'],livepayouts:['Live Payouts','Real-time withdrawals from funded traders'],affiliate:['Affiliate Program','Refer traders and earn commission'],giveaway:['Giveaways','Win free funded accounts'],leaderboard:['Leaderboard','Top funded traders — live'],levels:['Trader Levels','Climb tiers and unlock rewards'],rules:['Trading Rules','What keeps the program fair'],faq:['FAQ','Answers to common questions'],contact:['Contact Us','We are here to help'],account:['Account','']};
+function setNav(v){document.querySelectorAll('.navitem').forEach(b=>b.classList.toggle('active',b.dataset.view===v))}
+function go(view,arg){
+  CURRENT.view=view;CURRENT.arg=arg; setNav(view==='account'?'accounts':view);
+  const t=TITLES[view]||['','']; document.getElementById('pageTitle').textContent=t[0]; document.getElementById('pageSub').textContent=t[1];
+  if(chart){chart.destroy();chart=null}
+  if(typeof LEADERBOARD!=='undefined'&&view!=='leaderboard') LEADERBOARD.stop();
+  renderNewsBanner();
+  const el=document.getElementById('view'); el.className='';
+  if(view==='accounts') return renderAccounts();
+  if(view==='plans') return renderPlans();
+  if(view==='calc') return renderCalc();
+  if(view==='markets') return renderMarkets();
+  if(view==='livepayouts') return renderLivePayouts();
+  if(view==='affiliate') return renderAffiliate();
+  if(view==='giveaway') return renderGiveaway();
+  if(view==='leaderboard') return renderLeaderboard();
+  if(view==='levels') return renderLevels();
+  if(view==='faq') return renderFaq();
+  if(view==='contact') return renderContact();
+  if(view==='rules') return renderRules();
+  if(view==='account') return renderAccount(arg);
+}
+function paint(el,html){el.innerHTML=html; el.classList.add('view-anim'); animateCounts(el); runRings();}
+
+/* ===================== VIEWS ===================== */
+const TRADER_LEVELS=[
+  {name:'Rookie',min:0,icon:'🐣',perk:'Welcome aboard. Complete payouts to climb.',gift:false},
+  {name:'Starter',min:1,icon:'⭐',perk:'You are moving — rewards unlock at 3 payouts.',gift:false},
+  {name:'Bronze',min:3,icon:'🥉',perk:'10% off next challenge · INDPIPS welcome kit',gift:true},
+  {name:'Silver',min:6,icon:'🥈',perk:'15% off · free $5K challenge voucher · merch tee',gift:true},
+  {name:'Gold',min:11,icon:'🥇',perk:'20% off · free $25K challenge · priority payouts',gift:true},
+  {name:'Platinum',min:21,icon:'💎',perk:'Free $100K challenge · hardware wallet · reduced fees',gift:true},
+  {name:'Diamond',min:41,icon:'👑',perk:'VIP events · custom payouts · dedicated manager · annual bonus',gift:true},
+];
+function levelIndex(count){let i=0;for(let k=0;k<TRADER_LEVELS.length;k++){if(count>=TRADER_LEVELS[k].min)i=k;}return i;}
+function payoutSummary(accounts,payouts){
+  const count=payouts.length, lifetime=payouts.reduce((s,p)=>s+(p.amountCents||0),0)/100, best=payouts.reduce((m,p)=>Math.max(m,p.amountCents||0),0)/100;
+  const pending=accounts.filter(a=>a.status==='funded').reduce((s,a)=>s+Math.max(0,(a.equity-a.startingBalance))*((a.plan.profitSplitPct||80)/100),0);
+  return {count,lifetime,best,pending};
+}
+function levelBox(sum){
+  const li=levelIndex(sum.count), lvl=TRADER_LEVELS[li], nxt=TRADER_LEVELS[li+1];
+  const prog=nxt?Math.min(100,(sum.count-lvl.min)/(nxt.min-lvl.min)*100):100;
+  return `<div class="card lift clickable" onclick="go('levels')" style="margin-bottom:16px;background:linear-gradient(135deg,rgba(124,92,255,.16),rgba(47,107,255,.10))">
+    <div class="lvlhead"><div class="row" style="gap:14px">
+      <div class="lvl-badge">${lvl.icon}</div>
+      <div><div class="muted small">Trader level · ${sum.count} payout${sum.count===1?'':'s'}</div>
+        <div class="planhead" style="font-size:18px">${lvl.name}${nxt?` <span class="faint small">→ ${nxt.name}</span>`:''}</div>
+        <div class="bar" style="max-width:240px;margin-top:8px"><i style="width:${prog}%"></i></div>
+        <div class="faint small" style="margin-top:5px">${nxt?`${Math.max(0,nxt.min-sum.count)} more payout${nxt.min-sum.count===1?'':'s'} to ${nxt.name}`:'Max level'} · tap for rewards →</div></div></div>
+      <div class="lvlkpis">
+        <div><div class="muted small">Lifetime payout</div><div class="lvlnum grad" data-count="${sum.lifetime}" data-fmt="money">0</div></div>
+        <div><div class="muted small">Best payout</div><div class="lvlnum" data-count="${sum.best}" data-fmt="money">0</div></div>
+        <div><div class="muted small">Pending payout</div><div class="lvlnum" data-count="${sum.pending}" data-fmt="money">0</div></div>
+      </div></div></div>`;
+}
+async function renderAccounts(){
+  const el=document.getElementById('view'); el.innerHTML='<div class="muted">Loading…</div>';
+  try{
+    const accounts=await api('/accounts');
+    const payouts=await api('/payouts').catch(()=>[]);
+    const sum=payoutSummary(accounts,payouts);
+    if(!accounts.length){paint(el,levelBox(sum)+`<div class="card"><div class="planhead">No accounts yet</div><p class="muted">Start your first challenge and get on the path to funding.</p><button class="btn" onclick="go('plans')">Buy a challenge →</button></div>`);return;}
+    const totBal=accounts.reduce((a,x)=>a+x.balance,0), funded=accounts.filter(a=>a.status==='funded').length, active=accounts.filter(a=>a.status!=='breached').length;
+    const head=`<div class="grid cols-4" style="margin-bottom:16px">
+      <div class="card kpi lift"><div class="label"><span class="dot"></span>Accounts</div><div class="val" data-count="${accounts.length}" data-fmt="plain">0</div></div>
+      <div class="card kpi lift"><div class="label"><span class="dot"></span>Active</div><div class="val" data-count="${active}" data-fmt="plain">0</div></div>
+      <div class="card kpi lift"><div class="label"><span class="dot"></span>Funded</div><div class="val grad" data-count="${funded}" data-fmt="plain">0</div></div>
+      <div class="card kpi lift"><div class="label"><span class="dot"></span>Total balance</div><div class="val" data-count="${totBal}" data-fmt="money">0</div></div></div>`;
+    const cards=`<div class="grid cols-2">`+accounts.map(a=>{
+      const profit=((a.equity-a.startingBalance)/a.startingBalance*100), cls=profit>=0?'pos':'neg';
+      const sp=spark(a.sparkEquity&&a.sparkEquity.length?a.sparkEquity:[a.startingBalance,a.equity]);
+      return `<div class="card lift clickable" onclick="go('account','${a.id}')">
+        <div class="row between"><div><div class="planhead">${esc(a.plan?.name||'Account')}</div><div class="faint small">${esc(a.mt5Source)} · ${esc(a.mt5Login||'—')}</div></div>${statusBadge(a.status)}</div>
+        <div style="margin:14px 0 6px">${sp}</div>
+        <div class="grid cols-3">
+          <div class="kpi"><div class="label">Balance</div><div class="val" style="font-size:20px" data-count="${a.balance}" data-fmt="money">0</div></div>
+          <div class="kpi"><div class="label">Equity</div><div class="val" style="font-size:20px" data-count="${a.equity}" data-fmt="money">0</div></div>
+          <div class="kpi"><div class="label">P/L</div><div class="val ${cls}" style="font-size:20px" data-count="${profit}" data-fmt="pct" data-sign="1">0%</div></div>
+        </div></div>`;}).join('')+`</div>`;
+    paint(el,levelBox(sum)+head+cards);
+  }catch(e){paint(el,`<div class="card err">${esc(e.message)}</div>`)}
+}
+async function renderLevels(){
+  const el=document.getElementById('view');
+  let payouts=[],accounts=[]; try{payouts=await api('/payouts')}catch{} try{accounts=await api('/accounts')}catch{}
+  const count=payouts.length, li=levelIndex(count), lvl=TRADER_LEVELS[li], nxt=TRADER_LEVELS[li+1];
+  const prog=nxt?Math.min(100,(count-lvl.min)/(nxt.min-lvl.min)*100):100, unlocked=count>=3;
+  paint(el,`
+    <div class="card" style="margin-bottom:16px;background:linear-gradient(135deg,rgba(124,92,255,.16),rgba(47,107,255,.10))">
+      <div class="lvlhead"><div class="row" style="gap:14px"><div class="lvl-badge">${lvl.icon}</div>
+        <div><div class="muted small">Your level · ${count} payout${count===1?'':'s'}</div><div class="planhead" style="font-size:20px">${lvl.name}</div>
+          <div class="bar" style="max-width:280px;margin-top:8px"><i style="width:${prog}%"></i></div>
+          <div class="faint small" style="margin-top:5px">${nxt?`${Math.max(0,nxt.min-count)} more payout(s) to ${nxt.name}`:'Top tier reached 👑'}</div></div></div>
+        <div class="pill ${unlocked?'ok':''}" style="align-self:flex-start">${unlocked?'🎁 Rewards unlocked':'🔒 Unlock at 3 payouts'}</div></div>
+    </div>
+    ${!unlocked?`<div class="newsbar" style="background:linear-gradient(135deg,rgba(124,92,255,.16),rgba(47,107,255,.10));border-color:var(--line2)"><span class="row" style="gap:9px"><b>Almost there!</b> Complete your first <b>3 payouts</b> to start unlocking gifts &amp; offers — you have <b>${count}</b>.</span></div>`:''}
+    <div class="grid cols-3">
+      ${TRADER_LEVELS.map((L,i)=>`<div class="card ${i===li?'lvl-cur':''} lift"><div class="row between"><div class="planhead">${L.icon} ${L.name}</div>${L.gift?'<span class="pill ok">Gifts</span>':'<span class="pill">—</span>'}</div>
+        <div class="muted small" style="margin:6px 0 8px">${L.min===0?'New trader':`${L.min}+ payouts`}</div>
+        <div style="min-height:38px;font-size:13.5px">${L.gift&&!unlocked?'<span class="faint">🔒 Unlocks after your first 3 payouts</span>':esc(L.perk)}</div>
+        <div style="margin-top:10px">${i<li?'<span class="pos small">✓ Achieved</span>':i===li?'<span class="pill ok">Current level</span>':`<span class="faint small">Reach ${L.min} payouts</span>`}</div></div>`).join('')}
+    </div>
+    <div class="card" style="margin-top:16px"><b>How levels work</b><div class="muted small" style="margin-top:8px">Your level is based on the number of payouts you have received. Rewards, gifts and special offers begin after your first <b>3 payouts</b> and grow at every tier — from challenge discounts and free accounts to VIP perks and a dedicated account manager.</div></div>`);
+}
+
+let PLAN_CACHE=null, PLAN_TAB=1;
+async function renderPlans(){
+  const el=document.getElementById('view'); el.innerHTML='<div class="muted">Loading plans…</div>';
+  try{
+    PLAN_CACHE=PLAN_CACHE||await api('/plans');
+    paint(el,plansHtml());
+  }catch(e){paint(el,`<div class="card err">${esc(e.message)}</div>`)}
+}
+function setPlanTab(ph){PLAN_TAB=ph; const el=document.getElementById('view'); paint(el,plansHtml());}
+function plansHtml(){
+  const plans=PLAN_CACHE.filter(p=>p.phases===PLAN_TAB).sort((a,b)=>a.accountSize-b.accountSize);
+  const meta={1:['1-Step','Hit one 6% target, then get funded.'],2:['2-Step','Pass 4% then 6% across two phases.'],0:['Instant','Skip evaluation — funded from day one.']}[PLAN_TAB];
+  const tabBtn=(ph,lbl)=>`<button class="${PLAN_TAB===ph?'on':''}" onclick="setPlanTab(${ph})">${lbl}</button>`;
+  const how=`<div class="howto">
+    <div class="card step"><div class="num">1</div><div><b>Choose your challenge</b><div class="muted small">Pick a program and account size that fits your style.</div></div></div>
+    <div class="card step"><div class="num">2</div><div><b>Hit the target, respect the limits</b><div class="muted small">Reach the profit target without breaching drawdown.</div></div></div>
+    <div class="card step"><div class="num">3</div><div><b>Get funded & paid</b><div class="muted small">Trade the funded account and withdraw your ${plans[0]?.profitSplitPct||80}% share.</div></div></div>
+  </div>`;
+  // comparison table: rows = rules, columns = sizes
+  const row=(label,fn,accent)=>`<tr><td>${label}</td>${plans.map(p=>`<td class="${accent?'accent':''}">${fn(p)}</td>`).join('')}</tr>`;
+  const tgt=p=>p.phases===0?'—':(p.phase2TargetPct?`${p.phase1TargetPct}% → ${p.phase2TargetPct}%`:`${p.phase1TargetPct}%`);
+  const table=`<div class="card"><div class="scrollx"><table class="cmp">
+    <thead><tr><th>Account size</th>${plans.map(p=>`<th>$${p.accountSize/1000}K<small>${money(p.priceCents/100)} fee</small></th>`).join('')}</tr></thead>
+    <tbody>
+      ${row('Profit target',tgt,true)}
+      ${row('Daily drawdown',p=>p.dailyDdPct!=null?`${p.dailyDdPct}%`:'None')}
+      ${row('Max drawdown',p=>`${p.maxDdPct}%${p.maxDdTrailing?' trail':''}`)}
+      ${row('Drawdown basis',p=>p.ddBasis)}
+      ${row('Min trading days',()=>'None')}
+      ${row('Weekend trading',p=>p.weekendTradingAllowed?'✓ Allowed':'✕ No')}
+      ${row('Max loss / trade',p=>p.maxTradeFloatingLossPct!=null?`${p.maxTradeFloatingLossPct}%`:'—')}
+      ${row('News trading',()=>'✓ Allowed')}
+      ${row('Profit split',p=>`${p.profitSplitPct}%`,true)}
+      ${row('Payout after',p=>`${p.payoutMinProfitableDays} days`)}
+      <tr class="startrow"><td></td>${plans.map(p=>`<td><button class="btn sm" onclick="startChallenge('${p.id}')">Start</button></td>`).join('')}</tr>
+    </tbody></table></div></div>`;
+  return `<div class="tabs">${tabBtn(1,'1-Step')}${tabBtn(2,'2-Step')}${tabBtn(0,'Instant')}</div>
+    <div class="card" style="margin-bottom:18px"><div class="row between"><div><div class="planhead">${meta[0]} program</div><div class="muted small">${meta[1]}</div></div><span class="pill">All breaches are hard · payout @≥0.25%/day</span></div></div>
+    ${how}${table}`;
+}
+async function startChallenge(planId){try{await api('/accounts',{method:'POST',body:JSON.stringify({planId,mt5Source:'mock'})});go('accounts');}catch(e){alert(e.message)}}
+
+function tradeStats(trades,startingBalance,snapshots){
+  const t=trades||[]; const chron=t.slice().reverse();
+  let wins=0,losses=0,gw=0,gl=0,vol=0,sCur=0,bestStreak=0,worstStreak=0;
+  const perDay={},perSym={};
+  for(const x of chron){
+    const net=x.profit+(x.commission||0)+(x.swap||0); vol+=x.volume||0;
+    if(net>0){wins++;gw+=net;sCur=sCur>0?sCur+1:1;if(sCur>bestStreak)bestStreak=sCur;}
+    else if(net<0){losses++;gl+=Math.abs(net);sCur=sCur<0?sCur-1:-1;if(sCur<worstStreak)worstStreak=sCur;}
+    const d=x.closedAt.slice(0,10); perDay[d]=(perDay[d]||0)+net;
+    const s=x.symbol||'?'; (perSym[s]=perSym[s]||{n:0,net:0,w:0}); perSym[s].n++; perSym[s].net+=net; if(net>0)perSym[s].w++;
+  }
+  const decided=wins+losses, winRate=decided?wins/decided*100:0;
+  const avgWin=wins?gw/wins:0, avgLoss=losses?gl/losses:0;
+  const pf=gl>0?gw/gl:(gw>0?Infinity:0), rrr=avgLoss>0?avgWin/avgLoss:0;
+  const expectancy=(winRate/100*avgWin)-((1-winRate/100)*avgLoss);
+  const days=Object.values(perDay), bestDay=days.length?Math.max(...days):0, worstDay=days.length?Math.min(...days):0;
+  let maxDDseen=0; if(snapshots&&snapshots.length){const eq=snapshots.slice().reverse().map(s=>s.equity);let pk=eq[0];for(const v of eq){if(v>pk)pk=v;const dd=(pk-v)/pk*100;if(dd>maxDDseen)maxDDseen=dd;}}
+  return {total:t.length,wins,losses,winRate,avgWin,avgLoss,gw,gl,pf,rrr,expectancy,bestDay,worstDay,bestStreak,worstStreak:-worstStreak,maxDDseen,avgLot:t.length?vol/t.length:0,perSym,netDays:days.filter(d=>d>0).length};
+}
+function gauge(label,used,limit){
+  const k=limit?Math.min(100,used/limit*100):0, col=k>=90?'var(--red)':k>=60?'var(--amber)':'var(--green)';
+  return `<div class="gauge"><div class="gl"><span class="muted">${label}</span><span><b>${used.toFixed(2)}%</b> / ${limit}%</span></div><div class="gaugebar"><i style="width:${k}%;background:${col}"></i></div></div>`;
+}
+function objRow(label,detail,state,right){
+  const ic={pass:'✓',fail:'✕',wait:'…'}[state];
+  return `<div class="obj"><div class="row"><div class="ck ${state}">${ic}</div><div class="ol"><b>${label}</b><span>${detail}</span></div></div><div class="ov">${right||''}</div></div>`;
+}
+function statBox(v,l,cls){return `<div class="statbox"><b class="${cls||''}">${v}</b><span>${l}</span></div>`}
+
+async function renderAccount(id){
+  const el=document.getElementById('view'); el.innerHTML='<div class="muted">Loading…</div>';
+  try{
+    const a=await api('/accounts/'+id), p=a.plan;
+    document.getElementById('pageTitle').textContent=p.name;
+    document.getElementById('pageSub').textContent=`${esc(a.mt5Source)} · ${esc(a.mt5Login||'—')}`;
+    const profitPct=((a.equity-a.startingBalance)/a.startingBalance*100), pcls=profitPct>=0?'pos':'neg';
+    const target=a.phase===2?p.phase2TargetPct:p.phase1TargetPct;
+    const prog=target?Math.max(0,Math.min(100,profitPct/target*100)):100;
+    const basis=p.ddBasis==='equity'?a.equity:a.balance;
+    const dailyUsed=p.dailyDdPct!=null&&a.dayOpenValue>0?Math.max(0,(a.dayOpenValue-basis)/a.dayOpenValue*100):0;
+    const maxBase=p.maxDdTrailing?a.peakValue:a.startingBalance, maxUsed=Math.max(0,(maxBase-basis)/maxBase*100);
+    const S=tradeStats(a.trades,a.startingBalance,a.snapshots);
+    const pf=S.pf===Infinity?'∞':S.pf.toFixed(2);
+    let elig=null; try{elig=await api('/payouts/eligibility/'+id)}catch{}
+    const top=`<div class="card" style="margin-bottom:16px"><div class="row between">
+        <div class="row"><button class="btn ghost sm" onclick="go('accounts')">← Back</button> ${statusBadge(a.status)}</div>
+        <button class="btn sm" onclick="syncNow('${id}')">⟳ Sync trading day</button></div></div>`;
+    const kpis=`<div class="grid cols-4" style="margin-bottom:16px">
+      <div class="card kpi lift"><div class="label">Balance</div><div class="val" data-count="${a.balance}" data-fmt="money">0</div></div>
+      <div class="card kpi lift"><div class="label">Equity</div><div class="val" data-count="${a.equity}" data-fmt="money">0</div></div>
+      <div class="card kpi lift"><div class="label">Profit</div><div class="val ${pcls}" data-count="${profitPct}" data-fmt="pct" data-sign="1">0%</div></div>
+      <div class="card kpi lift"><div class="label">Win rate</div><div class="val grad" data-count="${S.winRate}" data-fmt="pct">0%</div></div></div>`;
+    const mid=`<div class="grid cols-2" style="margin-bottom:16px">
+        <div class="card"><div class="row between"><b>Equity & balance</b><span class="pill">${a.tradingDays} trading days</span></div><canvas id="eqChart" height="180" style="margin-top:12px"></canvas></div>
+        <div class="card">${target?`<div class="row between"><b>Progress to target</b><span class="muted small">${profitPct.toFixed(2)}% / ${target}%</span></div>${ring(prog,'to target')}`
+            :`<div class="row between"><b>Funded account</b>${statusBadge(a.status)}</div><div style="height:8px"></div>`}
+          <div style="margin-top:14px">${gauge('Daily drawdown used',dailyUsed,p.dailyDdPct||0)}${gauge('Max drawdown used',maxUsed,p.maxDdPct)}</div>
+          ${a.status==='funded'?payoutBlock(id,elig):''}</div></div>`;
+    // trading objectives
+    const oTarget = a.status==='funded'?'pass':target==null?'pass':profitPct>=target?'pass':a.status==='breached'?'fail':'wait';
+    const oMax = maxUsed>p.maxDdPct?'fail':'pass';
+    const oDaily = p.dailyDdPct==null?'pass':dailyUsed>p.dailyDdPct?'fail':'pass';
+    const objectives=`<div class="card" style="margin-bottom:16px"><b>Trading objectives</b><div style="margin-top:8px">
+      ${objRow('Profit target',target?`Reach ${target}% of starting balance`:'Instant funding — no target',oTarget,target?`${profitPct.toFixed(2)}%`:'—')}
+      ${objRow('Max drawdown',`Stay above ${money(maxBase*(1-p.maxDdPct/100))}`,oMax,`${maxUsed.toFixed(2)}% used`)}
+      ${objRow('Daily drawdown',p.dailyDdPct!=null?`Stay above ${money(a.dayOpenValue*(1-p.dailyDdPct/100))} today`:'No daily limit',oDaily,p.dailyDdPct!=null?`${dailyUsed.toFixed(2)}% used`:'—')}
+      ${objRow('Minimum trading days','No minimum — pass any time','pass',`${a.tradingDays} traded`)}
+      ${objRow('Weekend trading',p.weekendTradingAllowed?'Allowed on this plan':'Not allowed',p.weekendTradingAllowed?'pass':a.hasWeekendTrade?'fail':'pass','')}
+    </div></div>`;
+    // performance analytics
+    const analytics=`<div class="card" style="margin-bottom:16px"><div class="row between"><b>Performance analytics</b><span class="pill">${S.total} trades</span></div>
+      <div class="statgrid" style="margin-top:12px">
+        ${statBox(S.winRate.toFixed(1)+'%','Win rate')}
+        ${statBox(pf,'Profit factor','grad')}
+        ${statBox(S.rrr.toFixed(2),'Avg R:R')}
+        ${statBox(money(S.expectancy),'Expectancy / trade')}
+        ${statBox(money(S.avgWin),'Avg win','pos')}
+        ${statBox(money(-S.avgLoss),'Avg loss','neg')}
+        ${statBox(money(S.bestDay),'Best day','pos')}
+        ${statBox(money(S.worstDay),'Worst day','neg')}
+        ${statBox(S.wins+' / '+S.losses,'Wins / losses')}
+        ${statBox(S.bestStreak,'Best win streak','pos')}
+        ${statBox(S.avgLot.toFixed(2),'Avg lot size')}
+        ${statBox(S.maxDDseen.toFixed(2)+'%','Max DD experienced','neg')}
+      </div></div>`;
+    // per-symbol breakdown
+    const syms=Object.entries(S.perSym).sort((x,y)=>y[1].n-x[1].n);
+    const symbolCard=syms.length?`<div class="card" style="margin-bottom:16px"><b>Instrument breakdown</b><div class="scrollx"><table style="margin-top:10px"><thead><tr><th>Symbol</th><th>Trades</th><th>Win rate</th><th>Net P/L</th></tr></thead><tbody>
+      ${syms.map(([s,d])=>`<tr><td><b>${esc(s)}</b></td><td>${d.n}</td><td>${(d.w/d.n*100).toFixed(0)}%</td><td class="${d.net>=0?'pos':'neg'}">${money(d.net)}</td></tr>`).join('')}
+      </tbody></table></div></div>`:'';
+    const trades=`<div class="card" style="margin-bottom:16px"><b>Recent trades</b>
+        ${(a.trades||[]).length?`<div class="scrollx"><table style="margin-top:10px"><thead><tr><th>Closed</th><th>Symbol</th><th>Side</th><th>Lots</th><th>P/L</th></tr></thead><tbody>
+          ${a.trades.slice(0,14).map(t=>`<tr><td class="faint small">${new Date(t.closedAt).toLocaleDateString()}</td><td>${esc(t.symbol)}</td><td>${esc(t.side)}</td><td>${t.volume}</td><td class="${t.profit>=0?'pos':'neg'}">${money(t.profit)}</td></tr>`).join('')}
+        </tbody></table></div>`:'<div class="muted small" style="margin-top:10px">No trades yet — hit “Sync trading day”.</div>'}</div>`;
+    const limits=`<div class="card" style="margin-bottom:16px"><b>Account limits</b><div class="scrollx"><table class="small" style="margin-top:10px"><tbody>
+      <tr><td class="muted">Max DD floor</td><td>${money(maxBase*(1-p.maxDdPct/100))} <span class="faint">(${p.maxDdPct}%${p.maxDdTrailing?' trailing':''} · ${p.ddBasis})</span></td></tr>
+      <tr><td class="muted">Daily DD limit</td><td>${p.dailyDdPct!=null?p.dailyDdPct+'% of '+money(a.dayOpenValue):'—'}</td></tr>
+      <tr><td class="muted">Peak ${p.ddBasis}</td><td>${money(a.peakValue)}</td></tr>
+      <tr><td class="muted">Per-trade float cap</td><td>${p.maxTradeFloatingLossPct!=null?p.maxTradeFloatingLossPct+'%':'—'}</td></tr>
+      ${a.breachReason?`<tr><td class="muted">Breach</td><td class="neg">${esc(a.breachReason)}</td></tr>`:''}
+    </tbody></table></div></div>`;
+    const vio=(a.violations||[]).length?`<div class="card"><b>Violations</b><div class="scrollx"><table style="margin-top:10px"><thead><tr><th>When</th><th>Rule</th><th>Detail</th></tr></thead><tbody>
+        ${a.violations.map(v=>`<tr><td class="faint small">${new Date(v.createdAt).toLocaleString()}</td><td>${esc(v.rule)}</td><td class="small">${esc(v.message)}</td></tr>`).join('')}</tbody></table></div></div>`:'';
+    paint(el,top+kpis+mid+objectives+analytics+symbolCard+limits+trades+vio);
+
+    const snaps=(a.snapshots||[]).slice().reverse();
+    if(snaps.length){
+      const ctx=document.getElementById('eqChart'), g=ctx.getContext('2d');
+      const grad=g.createLinearGradient(0,0,0,170); grad.addColorStop(0,'rgba(79,140,255,.35)'); grad.addColorStop(1,'rgba(79,140,255,0)');
+      chart=new Chart(ctx,{type:'line',data:{labels:snaps.map((s,i)=>'D'+(i+1)),datasets:[
+        {label:'Equity',data:snaps.map(s=>s.equity*CUR.rate),borderColor:'#4f8cff',backgroundColor:grad,fill:true,tension:.3,pointRadius:0,borderWidth:2},
+        {label:'Balance',data:snaps.map(s=>s.balance*CUR.rate),borderColor:'#7c5cff',fill:false,tension:.3,pointRadius:0,borderWidth:2,borderDash:[5,4]}]},
+        options:{animation:{duration:1100,easing:'easeInOutCubic'},plugins:{legend:{labels:{color:'#93a0bd',usePointStyle:true,boxWidth:8}}},
+          scales:{x:{ticks:{color:'#5d6a87',maxTicksLimit:8},grid:{color:'rgba(255,255,255,.05)'}},y:{ticks:{color:'#5d6a87'},grid:{color:'rgba(255,255,255,.05)'}}}}});
+    }
+  }catch(e){paint(el,`<div class="card err">${esc(e.message)}</div>`)}
+}
+function payoutBlock(id,elig){
+  if(!elig) return ''; const ready=elig.eligible;
+  return `<div style="margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
+    <div class="row between"><b>Payout</b><span class="pill ${ready?'ok':''}">${elig.profitableDays}/${elig.requiredDays} profit days</span></div>
+    <div class="bar" style="margin:10px 0"><i style="width:${Math.min(100,elig.profitableDays/elig.requiredDays*100)}%"></i></div>
+    <div class="muted small" style="margin-bottom:8px">Need ${elig.requiredDays} days each ≥${elig.minDailyProfitPct}%. Max withdrawable: <b>${money(elig.maxWithdrawableCents/100)}</b>.</div>
+    ${ready?`<div class="row"><input id="poAmt" placeholder="Amount" style="max-width:170px"/><button class="btn sm" onclick="requestPayout('${id}')">Request payout</button></div>`:`<div class="faint small">Keep trading profitably to unlock.</div>`}
+    <div class="err" id="poErr"></div></div>`;
+}
+async function requestPayout(id){const amt=Number(document.getElementById('poAmt').value);
+  if(!amt){document.getElementById('poErr').textContent='Enter an amount';return}
+  try{await api('/payouts',{method:'POST',body:JSON.stringify({accountId:id,amountCents:Math.round(amt*100)})});alert('Payout requested ✓');renderAccount(id);}
+  catch(e){document.getElementById('poErr').textContent=e.message}}
+async function syncNow(id){try{await api('/accounts/'+id+'/sync',{method:'POST'});renderAccount(id);}catch(e){alert(e.message)}}
+
+/* ===================== CALCULATORS (multi-tool) ===================== */
+const INSTRUMENTS={
+  EURUSD:{pip:10,contract:100000,price:1.085,unit:'pip',pipUnit:0.0001},
+  GBPUSD:{pip:10,contract:100000,price:1.27,unit:'pip',pipUnit:0.0001},
+  USDJPY:{pip:6.7,contract:100000,price:156,unit:'pip',pipUnit:0.01},
+  XAUUSD:{pip:10,contract:100,price:2350,unit:'point',pipUnit:0.1},
+  US30:{pip:1,contract:1,price:39000,unit:'point',pipUnit:1},
+  NAS100:{pip:1,contract:1,price:20000,unit:'point',pipUnit:1},
+  BTCUSD:{pip:1,contract:1,price:68000,unit:'point',pipUnit:1},
+};
+let CALC_ACCOUNTS=[], CALC_TAB='risk', PNL_SIDE='buy';
+const v=id=>{const e=document.getElementById(id);return e?(+e.value||0):0;};
+const setT=(id,t)=>{const e=document.getElementById(id);if(e)e.textContent=t;};
+const insOf=id=>INSTRUMENTS[(document.getElementById(id)||{}).value]||INSTRUMENTS.EURUSD;
+const insOptions=()=>Object.keys(INSTRUMENTS).map(k=>`<option value="${k}">${k}</option>`).join('');
+const acctOptions=()=>`<option value="">Manual balance</option>`+CALC_ACCOUNTS.map(a=>`<option value="${a.id}">${esc(a.plan.name)} · ${money(a.balance)}</option>`).join('');
+function calcAcctBal(selId,balId){const a=CALC_ACCOUNTS.find(x=>x.id===document.getElementById(selId).value);if(a)document.getElementById(balId).value=a.balance;}
+async function renderCalc(){
+  try{CALC_ACCOUNTS=await api('/accounts')}catch{CALC_ACCOUNTS=[]}
+  paintCalc();
+}
+function setCalcTab(t){CALC_TAB=t;paintCalc();}
+function paintCalc(){
+  const el=document.getElementById('view');
+  const tabs=[['risk','Position & Risk'],['margin','Margin'],['leverage','Leverage'],['pip','Pip value'],['pnl','Profit / Loss']];
+  const bar=`<div class="tabs">${tabs.map(([k,l])=>`<button class="${CALC_TAB===k?'on':''}" onclick="setCalcTab('${k}')">${l}</button>`).join('')}</div>`;
+  const body={risk:bodyRisk,margin:bodyMargin,leverage:bodyLeverage,pip:bodyPip,pnl:bodyPnl}[CALC_TAB]();
+  const note=`<div class="card" style="margin-top:16px"><b>Note</b><div class="muted small" style="margin-top:8px">Pip/point values are standard estimates per 1.00 lot and vary slightly by broker. For indices and crypto, "pips" means index points. Always confirm contract specs with your broker.</div></div>`;
+  paint(el,bar+body+note);
+  ({risk:computeRisk,margin:computeMargin,leverage:computeLeverage,pip:computePip,pnl:computePnl})[CALC_TAB]();
+}
+/* --- Position & Risk --- */
+function bodyRisk(){return `<div class="grid cols-2">
+  <div class="card"><b>Position size & risk</b><div class="muted small" style="margin:4px 0 10px">How many lots to trade for a fixed risk.</div>
+    <label class="fld"><span>Use account</span><select id="rAcct" onchange="calcAcctBal('rAcct','rBal');computeRisk()">${acctOptions()}</select></label>
+    <div class="grid cols-2"><label class="fld"><span>Instrument</span><select id="rIns" onchange="computeRisk()">${insOptions()}</select></label>
+      <label class="fld"><span>Balance</span><input id="rBal" type="number" value="10000" oninput="computeRisk()"/></label></div>
+    <div class="grid cols-2"><label class="fld"><span>Risk %</span><input id="rRisk" type="number" value="1" step="0.1" oninput="computeRisk()"/></label>
+      <label class="fld"><span>Stop loss (pips/pts)</span><input id="rSL" type="number" value="20" oninput="computeRisk()"/></label></div>
+    <div class="seg2">${[0.5,1,2,3].map(r=>`<button onclick="document.getElementById('rRisk').value=${r};computeRisk()">${r}%</button>`).join('')}</div>
+  </div>
+  <div class="card"><b>Result</b>
+    <div class="calc-out" style="margin-top:10px"><div class="muted small">Suggested position size</div><div class="big" id="rLots">0.00 lots</div><div class="sub" id="rSub"></div></div>
+    <div style="margin-top:12px"><div class="orow"><span>Risk amount</span><b id="rAmt">—</b></div><div class="orow"><span>Value per pip/point</span><b id="rPip">—</b></div></div>
+    <div id="rDD"></div>
+  </div></div>`;}
+function computeRisk(){const ins=insOf('rIns'),bal=v('rBal'),risk=v('rRisk'),sl=v('rSL'),amt=bal*risk/100,lots=sl>0?amt/(sl*ins.pip):0;
+  setT('rLots',lots.toFixed(2)+' lots');setT('rSub',`${ins.unit} value ≈ ${money(ins.pip)}/lot · SL ${sl}`);
+  setT('rAmt',money(amt));setT('rPip',money(lots*ins.pip));
+  const a=CALC_ACCOUNTS.find(x=>x.id===document.getElementById('rAcct').value),dd=document.getElementById('rDD');if(!dd)return;
+  if(a){const p=a.plan,basis=p.ddBasis==='equity'?a.equity:a.balance,dFloor=p.dailyDdPct!=null?a.dayOpenValue*(1-p.dailyDdPct/100):null,
+    mFloor=(p.maxDdTrailing?a.peakValue:a.startingBalance)*(1-p.maxDdPct/100),dRoom=dFloor!=null?basis-dFloor:null,mRoom=basis-mFloor,rv=dRoom&&dRoom>0?amt/dRoom*100:null;
+    dd.innerHTML=`<div style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px">
+      <div class="orow"><span>Daily drawdown room</span><b>${dRoom!=null?money(dRoom):'—'}</b></div>
+      <div class="orow"><span>Max drawdown room</span><b>${money(mRoom)}</b></div>
+      ${rv!=null?`<div class="orow"><span>This risk vs daily limit</span><b class="${rv>50?'warn':'pos'}">${rv.toFixed(0)}%</b></div>`:''}
+      ${rv!=null&&rv>100?`<div class="warn small" style="margin-top:6px">⚠ Risk exceeds remaining daily drawdown.</div>`:''}</div>`;
+  }else dd.innerHTML='';}
+/* --- Margin --- */
+function bodyMargin(){return `<div class="grid cols-2">
+  <div class="card"><b>Margin required</b><div class="muted small" style="margin:4px 0 10px">Margin to open a position at a given leverage.</div>
+    <label class="fld"><span>Use account</span><select id="mAcct" onchange="calcAcctBal('mAcct','mBal');computeMargin()">${acctOptions()}</select></label>
+    <div class="grid cols-2"><label class="fld"><span>Instrument</span><select id="mIns" onchange="computeMargin()">${insOptions()}</select></label>
+      <label class="fld"><span>Lots</span><input id="mLots" type="number" value="1" step="0.01" oninput="computeMargin()"/></label></div>
+    <div class="grid cols-2"><label class="fld"><span>Leverage 1:</span><input id="mLev" type="number" value="100" oninput="computeMargin()"/></label>
+      <label class="fld"><span>Balance (optional)</span><input id="mBal" type="number" value="10000" oninput="computeMargin()"/></label></div>
+  </div>
+  <div class="card"><b>Result</b>
+    <div class="calc-out" style="margin-top:10px"><div class="muted small">Margin required</div><div class="big" id="mOut">—</div></div>
+    <div style="margin-top:12px"><div class="orow"><span>Position value (notional)</span><b id="mNot">—</b></div>
+      <div class="orow"><span>Margin % of balance</span><b id="mPct">—</b></div><div class="orow"><span>Free margin after</span><b id="mFree">—</b></div></div>
+  </div></div>`;}
+function computeMargin(){const ins=insOf('mIns'),lots=v('mLots'),lev=v('mLev')||1,bal=v('mBal'),not=lots*ins.contract*ins.price,mar=not/lev;
+  setT('mOut',money(mar));setT('mNot',money(not));setT('mPct',(bal>0?(mar/bal*100).toFixed(1):'0')+'%');setT('mFree',money(Math.max(0,bal-mar)));}
+/* --- Leverage --- */
+function bodyLeverage(){return `<div class="grid cols-2">
+  <div class="card"><b>Effective leverage</b><div class="muted small" style="margin:4px 0 10px">How much leverage a position uses vs your balance.</div>
+    <label class="fld"><span>Use account</span><select id="lAcct" onchange="calcAcctBal('lAcct','lBal');computeLeverage()">${acctOptions()}</select></label>
+    <div class="grid cols-2"><label class="fld"><span>Instrument</span><select id="lIns" onchange="computeLeverage()">${insOptions()}</select></label>
+      <label class="fld"><span>Lots</span><input id="lLots" type="number" value="1" step="0.01" oninput="computeLeverage()"/></label></div>
+    <label class="fld"><span>Balance</span><input id="lBal" type="number" value="10000" oninput="computeLeverage()"/></label>
+  </div>
+  <div class="card"><b>Result</b>
+    <div class="calc-out" style="margin-top:10px"><div class="muted small">Effective leverage used</div><div class="big" id="lOut">—</div></div>
+    <div style="margin-top:12px"><div class="orow"><span>Position value (notional)</span><b id="lNot">—</b></div>
+      <div class="orow"><span>Margin at 1:100</span><b id="lM100">—</b></div><div class="orow"><span>Margin at 1:500</span><b id="lM500">—</b></div></div>
+  </div></div>`;}
+function computeLeverage(){const ins=insOf('lIns'),lots=v('lLots'),bal=v('lBal'),not=lots*ins.contract*ins.price,eff=bal>0?not/bal:0;
+  setT('lOut','1:'+eff.toFixed(1));setT('lNot',money(not));setT('lM100',money(not/100));setT('lM500',money(not/500));}
+/* --- Pip value --- */
+function bodyPip(){return `<div class="grid cols-2">
+  <div class="card"><b>Pip / point value</b><div class="muted small" style="margin:4px 0 10px">Money value of one pip/point for your size.</div>
+    <div class="grid cols-2"><label class="fld"><span>Instrument</span><select id="pIns" onchange="computePip()">${insOptions()}</select></label>
+      <label class="fld"><span>Lots</span><input id="pLots" type="number" value="1" step="0.01" oninput="computePip()"/></label></div>
+  </div>
+  <div class="card"><b>Result</b>
+    <div class="calc-out" style="margin-top:10px"><div class="muted small">Value per pip/point</div><div class="big" id="pOut">—</div></div>
+    <div style="margin-top:12px"><div class="orow"><span>Per 1.00 lot</span><b id="pPer">—</b></div><div class="orow"><span>Per 0.10 lot</span><b id="pMini">—</b></div></div>
+  </div></div>`;}
+function computePip(){const ins=insOf('pIns'),lots=v('pLots');setT('pOut',money(lots*ins.pip));setT('pPer',money(ins.pip));setT('pMini',money(ins.pip*0.1));}
+/* --- Profit / Loss --- */
+function bodyPnl(){return `<div class="grid cols-2">
+  <div class="card"><b>Profit / Loss</b><div class="muted small" style="margin:4px 0 10px">Estimate P/L from entry to exit.</div>
+    <div class="grid cols-2"><label class="fld"><span>Instrument</span><select id="nIns" onchange="computePnl()">${insOptions()}</select></label>
+      <label class="fld"><span>Lots</span><input id="nLots" type="number" value="1" step="0.01" oninput="computePnl()"/></label></div>
+    <div class="seg2" id="nSide"><button class="on" onclick="setSide('buy')">Buy</button><button onclick="setSide('sell')">Sell</button></div>
+    <div class="grid cols-2" style="margin-top:8px"><label class="fld"><span>Entry price</span><input id="nEntry" type="number" value="1.0850" step="any" oninput="computePnl()"/></label>
+      <label class="fld"><span>Exit price</span><input id="nExit" type="number" value="1.0900" step="any" oninput="computePnl()"/></label></div>
+  </div>
+  <div class="card"><b>Result</b>
+    <div class="calc-out" style="margin-top:10px"><div class="muted small">Estimated P/L</div><div class="big" id="nOut">—</div></div>
+    <div style="margin-top:12px"><div class="orow"><span>Distance</span><b id="nPips">—</b></div><div class="orow"><span>Value per pip/point</span><b id="nPip">—</b></div></div>
+  </div></div>`;}
+function setSide(s){PNL_SIDE=s;document.querySelectorAll('#nSide button').forEach(b=>b.classList.toggle('on',b.textContent.toLowerCase()===s));computePnl();}
+function computePnl(){const ins=insOf('nIns'),lots=v('nLots'),entry=v('nEntry'),exit=v('nExit'),pips=ins.pipUnit?(exit-entry)/ins.pipUnit:0,pnl=pips*ins.pip*lots*(PNL_SIDE==='buy'?1:-1);
+  setT('nOut',(pnl>=0?'+':'')+money(pnl));setT('nPips',Math.abs(pips).toFixed(1)+(ins.unit==='point'?' pts':' pips'));setT('nPip',money(lots*ins.pip));
+  const o=document.getElementById('nOut');if(o)o.style.webkitTextFillColor=pnl>=0?'#22c98b':'#ff5d6c';}
+
+/* ===================== MARKETS / NEWS / FEAR GAUGE ===================== */
+function marketData(){
+  const now=Date.now(); const H=3600000;
+  const events=[
+    {in:2.3*H,ccy:'USD',title:'Core CPI m/m',impact:'high',speech:false},
+    {in:5*H,ccy:'USD',title:'Fed Chair Powell speaks',impact:'high',speech:true},
+    {in:9*H,ccy:'EUR',title:'ECB President Lagarde speaks',impact:'high',speech:true},
+    {in:1.2*H,ccy:'GBP',title:'BoE MPC member speech',impact:'med',speech:true},
+    {in:22*H,ccy:'INR',title:'RBI Governor Das speaks',impact:'high',speech:true},
+    {in:26*H,ccy:'USD',title:'Unemployment Claims',impact:'med',speech:false},
+    {in:30*H,ccy:'JPY',title:'BOJ Policy Rate',impact:'high',speech:false},
+    {in:48*H,ccy:'USD',title:'Non-Farm Payrolls',impact:'high',speech:false},
+  ].map(e=>({...e,at:now+e.in})).sort((a,b)=>a.at-b.at);
+  // a gently varying fear value
+  const fear=Math.round(38+25*Math.sin(now/8.64e7));
+  return {events,fear};
+}
+function fearLabel(v){return v<25?'Extreme Fear':v<45?'Fear':v<55?'Neutral':v<75?'Greed':'Extreme Greed';}
+function fearGauge(v){
+  const cx=130,cy=120,r=92; const a=Math.PI*(1-v/100); // 180°(left)→0°(right)
+  const nx=cx+ (r-16)*Math.cos(a), ny=cy-(r-16)*Math.sin(a);
+  const col=v<25?'#ff5d6c':v<45?'#ffca45':v<55?'#9aa6c2':v<75?'#22c98b':'#19c39a';
+  return `<svg viewBox="0 0 260 150" width="100%" style="max-width:300px;display:block;margin:0 auto">
+    <defs><linearGradient id="fg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ff5d6c"/><stop offset="0.5" stop-color="#ffca45"/><stop offset="1" stop-color="#22c98b"/></linearGradient></defs>
+    <path d="M ${cx-r} ${cy} A ${r} ${r} 0 0 1 ${cx+r} ${cy}" fill="none" stroke="url(#fg)" stroke-width="16" stroke-linecap="round"/>
+    <line x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="#eef2fb" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="${cx}" cy="${cy}" r="6" fill="#eef2fb"/>
+    <text x="${cx}" y="${cy-30}" text-anchor="middle" fill="${col}" font-size="30" font-weight="800" font-family="Sora">${v}</text>
+    <text x="${cx}" y="${cy-12}" text-anchor="middle" fill="#93a0bd" font-size="12">${fearLabel(v)}</text>
+  </svg>`;
+}
+function fmtIn(ms){const m=Math.max(0,Math.round(ms/60000));if(m<60)return m+'m';const h=Math.floor(m/60);return h+'h '+(m%60)+'m';}
+function renderMarkets(){
+  const el=document.getElementById('view'); const {events,fear}=marketData();
+  const impactDot=i=>`<span class="badge ${i==='high'?'b-breached':i==='med'?'b-phase':'b-pending'}" style="padding:3px 9px"><span class="d"></span>${i}</span>`;
+  paint(el,`
+    <div class="grid cols-2" style="margin-bottom:16px">
+      <div class="card"><div class="row between"><b>Market sentiment</b><span class="pill">Fear &amp; Greed</span></div>
+        ${fearGauge(fear)}
+        <div class="muted small" style="text-align:center;margin-top:6px">Aggregated from volatility, momentum & safe-haven demand. ${store.mode==='demo'?'(demo value — connect a live index in production)':''}</div>
+      </div>
+      <div class="card"><div class="row between"><b>🔔 Speech alerts</b><span class="pill">Central banks</span></div>
+        <div style="margin-top:8px">${events.filter(e=>e.speech).slice(0,4).map(e=>`<div class="obj"><div class="row"><div class="ck wait">🎤</div><div class="ol"><b>${esc(e.title)}</b><span>${e.ccy} · ${new Date(e.at).toLocaleString()}</span></div></div><div class="ov"><span class="pill">in ${fmtIn(e.at-Date.now())}</span></div></div>`).join('')}</div>
+      </div>
+    </div>
+    <div class="card"><div class="row between"><b>Economic calendar</b><span class="pill">High-impact news flagged</span></div>
+      <div class="scrollx"><table style="margin-top:10px"><thead><tr><th>When</th><th>Ccy</th><th>Event</th><th>Impact</th><th>Countdown</th></tr></thead><tbody>
+      ${events.map(e=>`<tr><td class="faint small">${new Date(e.at).toLocaleString([], {weekday:'short',hour:'2-digit',minute:'2-digit'})}</td><td><b>${e.ccy}</b></td><td>${e.speech?'🎤 ':''}${esc(e.title)}</td><td>${impactDot(e.impact)}</td><td class="small">in ${fmtIn(e.at-Date.now())}</td></tr>`).join('')}
+      </tbody></table></div>
+      <div class="muted small" style="margin-top:10px">During high-impact news, trade with care — your drawdown limits still apply. News trading is allowed on all plans.</div>
+    </div>`);
+}
+function renderLivePayouts(){
+  const el=document.getElementById('view');
+  paint(el,`
+    <div class="grid cols-3" style="margin-bottom:16px">
+      <div class="card kpi lift"><div class="label"><span class="dot"></span>Paid this month</div><div class="val grad">$4.8M+</div></div>
+      <div class="card kpi lift"><div class="label"><span class="dot"></span>Avg payout time</div><div class="val">12 hrs</div></div>
+      <div class="card kpi lift"><div class="label"><span class="dot"></span>Traders paid</div><div class="val">3,200+</div></div>
+    </div>
+    <div class="card"><div class="row between"><b>💸 Live payouts</b><span class="chip"><span class="live"></span> Live feed</span></div>
+      <div class="muted small" style="margin:4px 0 8px">Real-time withdrawals from funded traders around the world.</div>
+      <div id="payoutFeed" style="margin-top:6px"></div></div>`);
+  PAYOUTFEED.render();
+}
+function renderNewsBanner(){
+  const bar=document.getElementById('newsAlert'); if(!bar)return;
+  if(sessionStorage.getItem('pf_news_dismiss')){bar.innerHTML='';return;}
+  const {events}=marketData();
+  const next=events.find(e=>e.impact==='high'&&e.at-Date.now()<6*3600000);
+  if(!next){bar.innerHTML='';return;}
+  bar.innerHTML=`<div class="newsbar"><span class="row" style="gap:9px"><span class="nb-dot"></span><b>${next.speech?'🎤 Speech':'⚠ High-impact'}:</b> ${esc(next.ccy)} · ${esc(next.title)} in <b>${fmtIn(next.at-Date.now())}</b></span>
+    <span class="row" style="gap:8px"><button class="btn ghost sm" onclick="go('markets')">View calendar</button><button class="btn ghost sm" onclick="dismissNews()">✕</button></span></div>`;
+}
+function dismissNews(){sessionStorage.setItem('pf_news_dismiss','1');renderNewsBanner();}
+
+/* ===================== AFFILIATE ===================== */
+function renderAffiliate(){
+  const el=document.getElementById('view');
+  const code=(store.user?.email||'trader').split('@')[0].toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8)||'TRADER';
+  const link=`https://indpips.com/r/${code}`;
+  paint(el,`
+    <div class="grid cols-4" style="margin-bottom:16px">
+      <div class="card kpi lift"><div class="label">Your referrals</div><div class="val" data-count="0" data-fmt="plain">0</div></div>
+      <div class="card kpi lift"><div class="label">Active funded</div><div class="val" data-count="0" data-fmt="plain">0</div></div>
+      <div class="card kpi lift"><div class="label">Commission</div><div class="val grad">10%</div></div>
+      <div class="card kpi lift"><div class="label">Earnings</div><div class="val" data-count="0" data-fmt="money">0</div></div>
+    </div>
+    <div class="card" style="margin-bottom:16px"><b>Your referral link</b>
+      <div class="muted small" style="margin:4px 0 10px">Share this link. You earn commission on every challenge your referrals buy.</div>
+      <div class="row"><input id="affLink" value="${link}" readonly/><button class="btn sm" onclick="copyAff()">Copy</button></div>
+      <div class="seg2" style="margin-top:10px">
+        <button onclick="shareAff('wa')">WhatsApp</button><button onclick="shareAff('tg')">Telegram</button><button onclick="shareAff('tw')">X / Twitter</button>
+      </div>
+    </div>
+    <div class="grid cols-2">
+      <div class="card"><b>How it works</b>
+        <div style="margin-top:8px">
+          ${objRow('Share your link','Send it to traders in your network','pass','')}
+          ${objRow('They buy a challenge','You earn 10% of their fee instantly','pass','')}
+          ${objRow('Tiered rewards','Hit volume tiers for up to 15% + bonuses','wait','')}
+          ${objRow('Withdraw anytime','Payouts to bank/UPI once you cross ₹2,000','wait','')}
+        </div></div>
+      <div class="card"><b>Commission tiers</b>
+        <div class="scrollx"><table style="margin-top:8px"><thead><tr><th>Tier</th><th>Referred sales</th><th>Commission</th></tr></thead><tbody>
+          <tr><td>Starter</td><td>0 – 10</td><td class="accent">10%</td></tr>
+          <tr><td>Pro</td><td>11 – 50</td><td class="accent">12%</td></tr>
+          <tr><td>Elite</td><td>51 – 150</td><td class="accent">14%</td></tr>
+          <tr><td>Partner</td><td>150+</td><td class="accent">15% + bonus</td></tr>
+        </tbody></table></div></div>
+    </div>`);
+}
+function copyAff(){const i=document.getElementById('affLink');i.select();try{navigator.clipboard.writeText(i.value)}catch{}; alert('Referral link copied ✓');}
+function shareAff(p){const url=encodeURIComponent(document.getElementById('affLink').value);const txt=encodeURIComponent('Get funded with INDPIPS — use my link: ');
+  const map={wa:`https://wa.me/?text=${txt}${url}`,tg:`https://t.me/share/url?url=${url}&text=${txt}`,tw:`https://twitter.com/intent/tweet?text=${txt}${url}`};
+  window.open(map[p],'_blank');}
+
+/* ===================== GIVEAWAY ===================== */
+function renderGiveaway(){
+  const el=document.getElementById('view');
+  const end=Date.now()+ (3*86400000+5*3600000); // 3d 5h
+  const list=[
+    {prize:'$25K Instant Account',ends:end,entries:1284,joined:false},
+    {prize:'$10K 1-Step Challenge',ends:Date.now()+9*86400000,entries:642,joined:false},
+    {prize:'₹50,000 Cash + $5K Account',ends:Date.now()+16*86400000,entries:2110,joined:false},
+  ];
+  paint(el,`
+    <div class="card" style="margin-bottom:16px;background:linear-gradient(135deg,rgba(124,92,255,.16),rgba(47,107,255,.10))">
+      <div class="row between"><div><div class="planhead">🎁 Featured giveaway — $25K Instant Account</div><div class="muted small">Free to enter. Winner announced live on our channel.</div></div>
+        <div style="text-align:right"><div class="muted small">Ends in</div><div class="price" id="gwCount">—</div></div></div>
+      <div class="row" style="margin-top:14px;gap:10px"><button class="btn" onclick="enterGw(0)" id="gwBtn0">Enter giveaway</button><span class="pill">1,284 entries</span></div>
+    </div>
+    <b style="display:block;margin:6px 2px 10px" class="planhead">All active giveaways</b>
+    <div class="grid cols-3">
+      ${list.map((g,i)=>`<div class="card lift"><div class="planhead">${esc(g.prize)}</div>
+        <div class="muted small" style="margin:6px 0 12px">${g.entries.toLocaleString('en-IN')} entries</div>
+        <div class="orow"><span>Ends</span><b>${new Date(g.ends).toLocaleDateString()}</b></div>
+        <button class="btn sm" style="width:100%;margin-top:12px" onclick="enterGw(${i})" id="gwBtn${i}">Enter</button></div>`).join('')}
+    </div>
+    <div class="card" style="margin-top:16px"><b>How to enter</b>
+      <div class="muted small" style="margin-top:8px">Entries are free for registered traders. Bonus entries for active challenges and referrals. One winner per giveaway, drawn at random and verified on stream.</div></div>`);
+  const tick=()=>{const e=document.getElementById('gwCount');if(!e)return;const d=end-Date.now();if(d<=0){e.textContent='Ended';return;}
+    const dd=Math.floor(d/86400000),hh=Math.floor(d%86400000/3600000),mm=Math.floor(d%3600000/60000);e.textContent=`${dd}d ${hh}h ${mm}m`;};
+  tick(); if(window._gwTimer)clearInterval(window._gwTimer); window._gwTimer=setInterval(tick,30000);
+}
+function enterGw(i){const b=document.getElementById('gwBtn'+i);if(b){b.textContent='✓ Entered';b.classList.add('ghost');b.disabled=true;}
+  alert("You're in! Good luck 🎉");}
+
+/* ===================== LIVE PAYOUT FEED ===================== */
+const PAYOUTFEED=(()=>{
+  const people=[
+    ['James W.','London, UK','£','en-GB',[1200,2400,3600,5200,8400]],
+    ['Sophia R.','New York, US','$','en-US',[1500,3200,5400,9200,14500]],
+    ['Mohammed A.','Dubai, UAE','$','en-US',[2200,4800,7600,12500]],
+    ['Chen W.','Singapore','$','en-US',[1800,3900,6200,10400]],
+    ['Rahul S.','Mumbai, IN','₹','en-IN',[45000,120000,225000,310000]],
+    ['Carlos M.','São Paulo, BR','R$','pt-BR',[3200,6500,11800]],
+    ['Emeka O.','Lagos, NG','$','en-US',[1400,2900,4700]],
+    ['Hans K.','Berlin, DE','€','de-DE',[1600,3400,5900,9100]],
+    ['Daniel T.','Toronto, CA','$','en-US',[1700,3600,6100]],
+    ['Aiko T.','Tokyo, JP','$','en-US',[1900,4200,7300]],
+    ['Mateo G.','Madrid, ES','€','de-DE',[1300,2700,4800]],
+    ['Noah B.','Sydney, AU','$','en-US',[1500,3100,5600]],
+    ['Juan D.','Manila, PH','$','en-US',[900,2100,3800]],
+    ['Thabo M.','Johannesburg, ZA','$','en-US',[1200,2600,4400]],
+    ['Liam O.','Dublin, IE','€','de-DE',[1100,2300,4100,6800]],
+    ['Minh N.','Hanoi, VN','$','en-US',[800,1900,3500]],
+  ];
+  const sizes=[5,10,25,50,100,200];
+  const rnd=a=>a[Math.floor(Math.random()*a.length)];
+  let entries=[],t1,t2;
+  const make=at=>{const p=rnd(people),amt=rnd(p[4])+Math.floor(Math.random()*90)*10;
+    return {name:p[0],place:p[1],size:rnd(sizes),disp:p[2]+amt.toLocaleString(p[3]),at:at||Date.now()};};
+  function backlog(){entries=[];let t=Date.now()-3*60000;for(let i=0;i<7;i++){entries.push(make(t));t-=(20+Math.floor(Math.random()*9))*60000;}}
+  function ago(ms){const m=Math.round((Date.now()-ms)/60000);if(m<1)return 'just now';if(m<60)return m+'m ago';const h=Math.floor(m/60);return h+'h '+(m%60)+'m ago';}
+  function render(){const box=document.getElementById('payoutFeed');if(!box)return;
+    box.innerHTML=entries.map((e,i)=>`<div class="pf-item${i===0&&e.fresh?' pf-new':''}"><div class="pf-av">${e.name[0]}</div>
+      <div style="flex:1"><div><b>${e.name}</b> <span class="muted small">· ${e.place}</span></div><div class="muted small">Withdrew from $${e.size}K funded account</div></div>
+      <div style="text-align:right"><div class="pf-amt">${e.disp}</div><div class="faint small">${ago(e.at)}</div></div></div>`).join('');
+    entries.forEach(e=>e.fresh=false);}
+  function inject(){const e=make(Date.now());e.fresh=true;entries.unshift(e);entries=entries.slice(0,12);render();}
+  function start(){if(!entries.length)backlog();if(t1)clearInterval(t1);if(t2)clearInterval(t2);
+    t1=setInterval(render,60000); // refresh "x min ago"
+    t2=setInterval(inject,(20+Math.floor(Math.random()*8))*60000);} // 20–28 min ⇒ ~2–3/hour
+  return {start,render,backlog};
+})();
+
+/* ===================== LIVE LEADERBOARD ===================== */
+const LEADERBOARD=(()=>{
+  const seed=[['Aarav K.','Mumbai',100,24.8],['Isha R.','Bengaluru',50,22.1],['Vivaan S.','Delhi',200,19.7],['Diya M.','Pune',25,18.3],['Kabir N.','Hyderabad',100,16.9],['Anaya P.','Chennai',50,15.2],['Reyansh G.','Jaipur',10,14.1],['Saanvi T.','Kolkata',100,12.8],['Aditya V.','Surat',25,11.4],['Myra J.','Indore',50,10.2],['Ishaan D.','Lucknow',200,9.1],['Kiara B.','Kochi',10,8.0]];
+  let rows=seed.map(([name,city,size,pnl])=>({name,city,size,pnl,prev:pnl})),timer;
+  function tick(){rows.forEach(r=>{r.prev=r.pnl;r.pnl=Math.max(1.5,r.pnl+(Math.random()-0.46)*0.5);});rows.sort((a,b)=>b.pnl-a.pnl);render();}
+  function render(){const box=document.getElementById('lbBody');if(!box)return;
+    box.innerHTML=rows.map((r,i)=>{const medal=['🥇','🥈','🥉'][i]||('#'+(i+1));const up=r.pnl>=r.prev;
+      return `<tr><td style="font-family:Sora;font-weight:700">${medal}</td><td><div class="row" style="gap:9px"><div class="pf-av" style="width:30px;height:30px;font-size:13px">${r.name[0]}</div><div><b>${r.name}</b><div class="faint small">${r.city}</div></div></div></td><td>$${r.size}K</td><td class="pos" style="font-family:Sora;font-weight:700">+${r.pnl.toFixed(2)}% <span style="color:${up?'var(--green)':'var(--red)'}">${up?'▲':'▼'}</span></td></tr>`;}).join('');}
+  function start(){if(timer)clearInterval(timer);timer=setInterval(tick,6000);render();}
+  function stop(){if(timer)clearInterval(timer);}
+  return {start,stop,render};
+})();
+function renderLeaderboard(){
+  const el=document.getElementById('view');
+  paint(el,`<div class="card"><div class="row between"><b>🏆 Live leaderboard</b><span class="chip"><span class="live"></span> Updating live</span></div>
+    <div class="muted small" style="margin:4px 0 10px">Top funded traders by current profit. ${store.mode==='demo'?'(demo data)':''}</div>
+    <div class="scrollx"><table><thead><tr><th>Rank</th><th>Trader</th><th>Account</th><th>Profit</th></tr></thead><tbody id="lbBody"></tbody></table></div></div>`);
+  LEADERBOARD.start();
+}
+
+/* ===================== GIFT A CHALLENGE ===================== */
+async function openGift(planId){
+  if(!PLAN_CACHE){try{PLAN_CACHE=await api('/plans')}catch{PLAN_CACHE=[]}}
+  const opts=(PLAN_CACHE||[]).map(p=>`<option value="${p.id}" ${p.id===planId?'selected':''}>${esc(p.name)} — ${money(p.priceCents/100)}</option>`).join('');
+  document.getElementById('modalRoot').innerHTML=`<div class="modal-bg" onclick="if(event.target===this)closeGift()">
+    <div class="modal"><div class="row between"><b>🎁 Gift a funded challenge</b><button class="btn ghost sm" onclick="closeGift()">✕</button></div>
+      <div class="muted small" style="margin:6px 0 12px">Send a challenge to a friend or family member — they get an email with redemption instructions.</div>
+      <label class="fld"><span>Recipient name</span><input id="giftName" placeholder="e.g. Rahul"/></label>
+      <label class="fld"><span>Recipient email</span><input id="giftEmail" placeholder="name@email.com"/></label>
+      <label class="fld"><span>Challenge</span><select id="giftPlan">${opts||'<option>Open Buy Challenge first</option>'}</select></label>
+      <label class="fld"><span>Message (optional)</span><input id="giftMsg" placeholder="Good luck! 🎯"/></label>
+      <button class="btn" style="width:100%;margin-top:6px" onclick="sendGift()">Send gift</button>
+      <div class="err" id="giftErr"></div></div></div>`;
+}
+function closeGift(){document.getElementById('modalRoot').innerHTML='';}
+function sendGift(){const e=(document.getElementById('giftEmail').value||'').trim();
+  if(!/.+@.+\..+/.test(e)){document.getElementById('giftErr').textContent='Enter a valid email';return;}
+  const nm=document.getElementById('giftName').value||'Your friend'; closeGift(); alert('🎁 Gift sent! '+nm+' will receive an email shortly.');}
+
+/* ===================== FAQ ===================== */
+function renderFaq(){
+  const el=document.getElementById('view');
+  const faqs=[
+    ['What is a funded challenge?','You trade an evaluation account and prove consistency by hitting a profit target while respecting drawdown limits. Pass, and you trade a funded account where you keep the majority of the profits.'],
+    ['What programs do you offer?','Three: 1-Step (one 6% target), 2-Step (4% then 6%), and Instant (funded from day one, no target). Account sizes from $5K to $200K.'],
+    ['What are the drawdown rules?','1-Step & 2-Step: 4% daily and 6% trailing max drawdown (on balance, refreshed end-of-day at 02:30 IST). Instant: a single 5% trailing drawdown on equity. All breaches are hard.'],
+    ['Is news and weekend trading allowed?','News trading is allowed on all plans. Weekend trading is not allowed on 1-Step and 2-Step, but is allowed on Instant accounts.'],
+    ['How do payouts work?','Once funded you keep 80% of profits. You can request a payout after a set number of profitable days (each ≥0.25%): 7 days for 1-Step, 5 for 2-Step, 4 for Instant.'],
+    ['How fast are payouts?','Most payouts are processed within about 12 hours, paid to bank or UPI.'],
+    ['Which platform do I trade on?','MetaTrader 5 (MT5). Connect your account or trade the provided server.'],
+    ['What is the trader level system?','Your level is based on how many payouts you have received. After your first 3 payouts you start unlocking gifts and special offers that grow at every tier.'],
+    ['What strategies are prohibited?','Abusive strategies like arbitrage, latency/HFT exploitation, grid, group hedging across accounts, and account/device sharing. See the Rules page for the full list.'],
+    ['Can I gift or refer a challenge?','Yes — use the 🎁 Gift button to send a challenge to friends or family, and the Affiliate page to earn commission on referrals.'],
+  ];
+  paint(el,`<div class="card"><b>Frequently asked questions</b>
+    <div style="margin-top:12px">${faqs.map(([q,a])=>`<details class="faq"><summary>${esc(q)}</summary><div class="ans">${esc(a)}</div></details>`).join('')}</div></div>
+    <div class="card" style="margin-top:16px"><div class="row between" style="flex-wrap:wrap;gap:10px"><div><b>Still need help?</b><div class="muted small">Our team usually replies within a few hours.</div></div><button class="btn sm" onclick="go('contact')">Contact us →</button></div></div>`);
+}
+
+/* ===================== CONTACT ===================== */
+function renderContact(){
+  const el=document.getElementById('view');
+  paint(el,`<div class="grid cols-2">
+    <div class="card"><b>Send us a message</b><div class="muted small" style="margin:4px 0 10px">We typically reply within a few hours.</div>
+      <div class="grid cols-2"><label class="fld"><span>Name</span><input id="ctName" placeholder="Your name"/></label>
+        <label class="fld"><span>Email</span><input id="ctEmail" placeholder="name@email.com"/></label></div>
+      <label class="fld"><span>Topic</span><select id="ctTopic"><option>General</option><option>Billing & refunds</option><option>Payouts</option><option>Technical / MT5</option><option>KYC / Verification</option></select></label>
+      <label class="fld"><span>Message</span><textarea id="ctMsg" rows="4" placeholder="How can we help?"></textarea></label>
+      <button class="btn" style="width:100%" onclick="sendContact()">Send message</button>
+      <div class="err" id="ctErr"></div>
+    </div>
+    <div class="card"><b>Other ways to reach us</b>
+      <div style="margin-top:8px">
+        ${objRow('Email','support@indpips.com','pass','')}
+        ${objRow('Live chat','Mon–Sat · 9:00–21:00 IST','pass','')}
+        ${objRow('Response time','Usually under 4 hours','pass','')}
+        ${objRow('Help center','Browse the FAQ','pass','')}
+      </div>
+      <div class="seg2" style="margin-top:14px">
+        <button onclick="window.open('https://wa.me/','_blank')">WhatsApp</button>
+        <button onclick="window.open('https://t.me/','_blank')">Telegram</button>
+        <button onclick="window.open('https://discord.com/','_blank')">Discord</button>
+      </div>
+      <div class="muted small" style="margin-top:14px">🔒 For account-specific issues, please include your account login so we can help faster.</div>
+    </div></div>`);
+}
+function sendContact(){
+  const e=(document.getElementById('ctEmail').value||'').trim();
+  if(!/.+@.+\..+/.test(e)){document.getElementById('ctErr').textContent='Enter a valid email';return;}
+  if(!(document.getElementById('ctMsg').value||'').trim()){document.getElementById('ctErr').textContent='Please write a message';return;}
+  document.getElementById('ctErr').textContent='';
+  alert('Message sent ✓ Our team will get back to you soon.');
+  document.getElementById('ctMsg').value='';
+}
+
+async function renderRules(){
+  const el=document.getElementById('view'); el.innerHTML='<div class="muted">Loading…</div>';
+  try{
+    const acts=await api('/prohibited-activities');
+    paint(el,`<div class="card"><b>Prohibited / restricted trading activities</b>
+      <div class="muted small" style="margin:6px 0 12px">These conduct rules apply on top of your plan limits — they keep the program fair for everyone.</div>
+      <div class="scrollx"><table><thead><tr><th>Activity</th><th>Enforcement</th><th>Detail</th></tr></thead><tbody>
+      ${acts.map(a=>`<tr><td><b>${esc(a.name)}</b>${a.thresholds?`<div class="faint small">${esc(Object.entries(a.thresholds).map(([k,v])=>k+': '+v).join(' · '))}</div>`:''}</td>
+        <td><span class="enf-${a.enforcement}">${a.enforcement}</span></td><td class="small muted">${esc(a.description)}</td></tr>`).join('')}
+      </tbody></table></div></div>`);
+  }catch(e){paint(el,`<div class="card err">${esc(e.message)}</div>`)}
+}
+
+/* ===================== boot ===================== */
+setMode(store.mode); setCur(store.cur);
+// animate hero stats on login
+(function heroStats(){
+  const targets={st1:[12480,''],st2:[48,'Cr ₹'],st3:[12,' hrs']};
+  Object.entries(targets).forEach(([id,[to,suf]])=>{const el=document.getElementById(id);if(!el)return;const t0=performance.now();
+    (function s(t){const k=Math.min(1,(t-t0)/1400),e=1-Math.pow(1-k,3);el.textContent=(suf==='Cr ₹'?'₹'+Math.round(to*e)+' Cr':Math.round(to*e).toLocaleString('en-IN')+suf);if(k<1)requestAnimationFrame(s);})(t0);});
+})();
+if(store.token){ enterApp(); }
+</script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+# One command to run the whole backend locally:  docker compose up
+# API on http://localhost:4000 — point the dashboards' "Live API" at it.
+services:
+  api:
+    build: .
+    ports:
+      - "4000:4000"
+    environment:
+      JWT_SECRET: "change-me-to-a-long-random-string"
+      MT5_ADAPTER: "mock"            # mock | metaapi | eabridge
+      EA_BRIDGE_SECRET: "change-me"  # used only for the EA bridge
+      DATABASE_URL: "file:/data/indpips.db"
+      SYNC_INTERVAL_MS: "60000"
+    volumes:
+      - indpips_data:/data
+    restart: unless-stopped
+
+volumes:
+  indpips_data:

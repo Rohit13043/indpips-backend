@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>INDPIPS — Admin</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#070b16;--panel:rgba(20,28,48,.66);--panel2:#121a2e;--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.14);
+    --text:#eef2fb;--muted:#93a0bd;--faint:#5d6a87;--blue:#2f6bff;--blue2:#4f8cff;--violet:#7c5cff;--saffron:#ff9933;
+    --green:#22c98b;--red:#ff5d6c;--amber:#ffca45;--radius:18px;--grad:linear-gradient(135deg,var(--blue),var(--violet));--shadow:0 18px 50px -20px rgba(0,0,0,.7)}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Plus Jakarta Sans',system-ui,Segoe UI,Arial,sans-serif;background:radial-gradient(1200px 600px at 80% -10%,#16203a,var(--bg) 55%);color:var(--text);min-height:100vh}
+  button{font-family:inherit;cursor:pointer}
+  .pips{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .center{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .hide{display:none}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;backdrop-filter:blur(14px);box-shadow:var(--shadow)}
+  .btn{background:var(--grad);border:none;color:#fff;padding:11px 15px;border-radius:11px;font-weight:700;transition:transform .15s;box-shadow:0 12px 26px -12px var(--blue)}
+  .btn:hover{transform:translateY(-2px)} .btn.sm{padding:7px 11px;font-size:13px}
+  .btn.ghost{background:var(--panel2);border:1px solid var(--line2);color:var(--text);box-shadow:none}
+  .btn.green{background:var(--green);box-shadow:none} .btn.red{background:var(--red);box-shadow:none} .btn.amber{background:var(--amber);color:#1a1300;box-shadow:none}
+  input,select{background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:11px 12px;border-radius:10px;font-size:14px;width:100%;font-family:inherit}
+  input:focus,select:focus{outline:none;border-color:var(--blue2)}
+  label.fld{display:block;margin:10px 0} label.fld span{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+  .shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+  @media(max-width:820px){.shell{grid-template-columns:1fr}.side{display:none}}
+  .side{position:sticky;top:0;height:100vh;padding:22px 16px;background:linear-gradient(180deg,rgba(12,19,38,.9),rgba(8,12,24,.9));border-right:1px solid var(--line);display:flex;flex-direction:column;gap:5px}
+  .logo{font-family:Sora;font-weight:800;font-size:19px;padding:6px 8px 16px}
+  .navitem{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border-radius:11px;color:var(--muted);font-weight:600;cursor:pointer;border:1px solid transparent}
+  .navitem:hover{color:var(--text);background:rgba(255,255,255,.04)}
+  .navitem.active{color:#fff;background:linear-gradient(135deg,rgba(47,107,255,.22),rgba(124,92,255,.18));border-color:var(--line2)}
+  .navitem .ct{font-size:11px;background:rgba(255,255,255,.08);padding:2px 7px;border-radius:999px;color:var(--muted)}
+  .side-foot{margin-top:auto;font-size:12px;color:var(--faint);padding:12px}
+  .main{padding:24px 30px 60px;min-width:0}
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;gap:14px;flex-wrap:wrap}
+  .topbar h1{font-family:Sora;font-size:22px;margin:0}.topbar .sub{color:var(--muted);font-size:13px;margin-top:2px}
+  .chip{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--muted);background:var(--panel2);border:1px solid var(--line);padding:8px 12px;border-radius:999px}
+  .live{width:8px;height:8px;border-radius:50%;background:var(--green)}
+  .grid{display:grid;gap:16px}.cols-4{grid-template-columns:repeat(4,1fr)}.cols-3{grid-template-columns:repeat(3,1fr)}.cols-2{grid-template-columns:repeat(2,1fr)}
+  @media(max-width:980px){.cols-4{grid-template-columns:1fr 1fr}}@media(max-width:680px){.cols-4,.cols-3,.cols-2{grid-template-columns:1fr}}
+  .kpi .label{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+  .kpi .val{font-family:Sora;font-size:26px;font-weight:800;margin-top:8px}.kpi .val.grad{background:linear-gradient(135deg,var(--green),#34d4ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .muted{color:var(--muted)}.faint{color:var(--faint)}.small{font-size:12.5px}.row{display:flex;align-items:center;gap:10px}.between{justify-content:space-between}
+  .pos{color:var(--green)}.neg{color:var(--red)}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:11px 10px;border-bottom:1px solid var(--line)}
+  th{color:var(--faint);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+  tbody tr:hover{background:rgba(255,255,255,.03)}
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700}
+  .b-funded{background:rgba(34,201,139,.14);color:var(--green)}.b-breached{background:rgba(255,93,108,.14);color:var(--red)}
+  .b-phase{background:rgba(79,140,255,.14);color:var(--blue2)}.b-pending{background:rgba(147,160,189,.12);color:var(--muted)}
+  .b-verified{background:rgba(34,201,139,.14);color:var(--green)}.b-rejected{background:rgba(255,93,108,.14);color:var(--red)}
+  .b-paid{background:rgba(34,201,139,.14);color:var(--green)}.b-approved{background:rgba(79,140,255,.14);color:var(--blue2)}
+  .b-requested{background:rgba(255,202,69,.16);color:var(--amber)}
+  .pill{font-size:11px;padding:3px 9px;border-radius:999px;border:1px solid var(--line2);color:var(--muted);font-weight:600}
+  .av{width:34px;height:34px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-weight:800;flex:none;font-family:Sora}
+  .tabs{display:inline-flex;background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:4px;gap:4px;margin-bottom:16px;flex-wrap:wrap}
+  .tabs button{background:transparent;border:none;color:var(--muted);padding:8px 14px;font-weight:700;border-radius:8px}
+  .tabs button.on{background:var(--grad);color:#fff}
+  .scrollx{overflow-x:auto}
+  .view-anim>*{animation:rise .5s cubic-bezier(.2,.7,.3,1) both}
+  @keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  .modal-bg{position:fixed;inset:0;z-index:60;background:rgba(4,7,14,.72);display:flex;align-items:center;justify-content:center;padding:20px}
+  .modal{width:100%;max-width:460px;background:var(--panel2);border:1px solid var(--line2);border-radius:18px;padding:22px;box-shadow:var(--shadow)}
+  .seg{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:4px;gap:4px;margin:14px 0 6px}
+  .segbtn{flex:1;background:transparent;border:none;color:var(--muted);padding:9px;font-weight:700;border-radius:8px}
+  .segbtn.on{background:var(--grad);color:#fff}
+  .err{color:var(--red);font-size:13px;margin-top:8px;min-height:16px}
+  .ddbar{height:10px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden}
+  .ddbar>i{display:block;height:100%;border-radius:999px;transition:width .8s}
+  .warn{color:var(--amber)}
+  .funnel-row{display:flex;align-items:center;gap:12px;margin:8px 0}
+  .funnel-row .fb{height:30px;border-radius:8px;background:var(--grad);display:flex;align-items:center;padding:0 10px;color:#fff;font-weight:700;font-size:13px;min-width:54px}
+</style>
+</head>
+<body>
+<!-- LOGIN -->
+<div id="auth" class="center">
+  <div class="card" style="width:400px">
+    <div class="logo" style="padding:0 0 4px"><span style="color:var(--saffron)">IND</span><span class="pips">PIPS</span> <span class="muted" style="font-size:13px;font-weight:600">Admin</span></div>
+    <div class="muted small">Sign in to the operations console</div>
+    <div class="seg"><button id="mDemo" class="segbtn on" onclick="setMode('demo')">Demo</button><button id="mLive" class="segbtn" onclick="setMode('live')">Live API</button></div>
+    <div class="muted small" id="modeHelp" style="min-height:30px"></div>
+    <div id="liveFields" class="hide"><label class="fld"><span>API base URL</span><input id="apiBase" value="http://localhost:4000"/></label></div>
+    <label class="fld"><span>Email</span><input id="email" value="admin@propfirm.test"/></label>
+    <label class="fld"><span>Password</span><input id="password" type="password" value="admin1234"/></label>
+    <button class="btn" style="width:100%;margin-top:8px" onclick="login()">Log in</button>
+    <div class="err" id="authErr"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hide">
+  <div class="shell">
+    <aside class="side">
+      <div class="logo"><span style="color:var(--saffron)">IND</span><span class="pips">PIPS</span></div>
+      <div class="navitem active" data-v="overview" onclick="go('overview')"><span>Overview</span></div>
+      <div class="navitem" data-v="users" onclick="go('users')"><span>Users</span><span class="ct" id="ctUsers"></span></div>
+      <div class="navitem" data-v="accounts" onclick="go('accounts')"><span>Accounts</span><span class="ct" id="ctAccts"></span></div>
+      <div class="navitem" data-v="risk" onclick="go('risk')"><span>Risk &amp; Liability</span><span class="ct" id="ctRisk"></span></div>
+      <div class="navitem" data-v="payouts" onclick="go('payouts')"><span>Payouts</span><span class="ct" id="ctPay"></span></div>
+      <div class="navitem" data-v="kyc" onclick="go('kyc')"><span>KYC queue</span><span class="ct" id="ctKyc"></span></div>
+      <div class="navitem" data-v="marketing" onclick="go('marketing')"><span>Marketing</span></div>
+      <div class="navitem" data-v="plans" onclick="go('plans')"><span>Plans</span></div>
+      <div class="side-foot">INDPIPS Admin · v1<br>Demo console</div>
+    </aside>
+    <main class="main">
+      <div class="topbar">
+        <div><h1 id="title">Overview</h1><div class="sub" id="sub"></div></div>
+        <div class="row"><span class="chip"><span class="live"></span> <span id="modeChip">Demo</span></span><button class="btn ghost sm" onclick="resetDemo()">Reset data</button><button class="btn ghost sm" onclick="logout()">Logout</button></div>
+      </div>
+      <div id="view"></div>
+    </main>
+  </div>
+  <div id="modalRoot"></div>
+</div>
+
+<script>
+/* ---------- helpers ---------- */
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const money=n=>'$'+Number(n||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+const money2=n=>'$'+Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+function statusBadge(s){const m={funded:'b-funded',breached:'b-breached',phase_1:'b-phase',phase_2:'b-phase',pending:'b-pending'};return `<span class="badge ${m[s]||'b-pending'}">${esc((s||'').replace('_',' '))}</span>`;}
+function kycBadge(s){const m={verified:'b-verified',pending:'b-requested',rejected:'b-rejected'};return `<span class="badge ${m[s]||'b-pending'}">${esc(s)}</span>`;}
+function payBadge(s){const m={paid:'b-paid',approved:'b-approved',requested:'b-requested',rejected:'b-rejected'};return `<span class="badge ${m[s]||'b-pending'}">${esc(s)}</span>`;}
+
+/* ---------- seeded demo data ---------- */
+const KEY='indpips_admin_v3';
+let DB=null;
+function rngFrom(seed){let s=seed;return()=>{s=(s*1103515245+12345)&0x7fffffff;return s/0x7fffffff;};}
+function genDB(){
+  const rnd=rngFrom(20260621);
+  const pick=a=>a[Math.floor(rnd()*a.length)];
+  const FIRST=['Rahul','James','Sophia','Mohammed','Chen','Carlos','Hans','Daniel','Aiko','Mateo','Noah','Priya','Emeka','Thabo','Liam','Aisha','Wei','Ananya'];
+  const LAST=['Sharma','Wright','Reyes','Al-Farsi','Wang','Mendes','Klein','Thompson','Tanaka','Garcia','Brown','Patel','Okafor','Mokoena','Murphy','Khan','Li','Iyer'];
+  const PLACES=[['India','Mumbai'],['UK','London'],['USA','New York'],['UAE','Dubai'],['Singapore','Singapore'],['Nigeria','Lagos'],['Germany','Berlin'],['Brazil','São Paulo'],['Canada','Toronto'],['Australia','Sydney']];
+  const PLANS=[
+    {id:'1s10',name:'1-Step 10K',size:10000,price:99,phases:1,split:80},
+    {id:'1s25',name:'1-Step 25K',size:25000,price:199,phases:1,split:80},
+    {id:'2s50',name:'2-Step 50K',size:50000,price:299,phases:2,split:80},
+    {id:'2s100',name:'2-Step 100K',size:100000,price:499,phases:2,split:80},
+    {id:'in25',name:'Instant 25K',size:25000,price:199,phases:0,split:80},
+    {id:'in200',name:'Instant 200K',size:200000,price:999,phases:0,split:80},
+  ];
+  const statuses=['funded','funded','phase_1','phase_2','breached','funded','phase_1'];
+  const users=[],accounts=[],payouts=[];
+  for(let i=0;i<14;i++){
+    const fn=pick(FIRST),ln=pick(LAST),pl=pick(PLACES);
+    const kyc=pick(['verified','verified','verified','pending','pending','rejected']);
+    const joined=Date.now()-Math.floor(rnd()*200)*86400000;
+    const u={id:'u'+i,name:fn+' '+ln,email:(fn+'.'+ln).toLowerCase()+'@mail.com',country:pl[0],city:pl[1],kyc,joined};
+    users.push(u);
+    const nAcc=1+Math.floor(rnd()*2);
+    for(let j=0;j<nAcc;j++){
+      const plan=pick(PLANS),st=pick(statuses);
+      const prof=(rnd()*0.12-0.03);
+      const bal=Math.round(plan.size*(1+prof));
+      const maxDd=plan.phases===0?5:6;
+      accounts.push({id:'a'+i+'_'+j,userId:u.id,trader:u.name,plan:plan.name,planId:plan.id,size:plan.size,split:plan.split,country:u.country,
+        login:'MT5-'+(500000+Math.floor(rnd()*490000)),status:st,balance:bal,equity:Math.round(bal*(1+(rnd()-0.5)*0.01)),price:plan.price,
+        maxDd,ddUsed:Math.round(rnd()*maxDd*100)/100,flagged:rnd()>0.88});
+    }
+  }
+  // payouts from funded accounts
+  const funded=accounts.filter(a=>a.status==='funded'&&a.balance>a.size);
+  funded.forEach((a,idx)=>{
+    if(rnd()>0.45){
+      const profit=a.equity-a.size, amt=Math.round(Math.max(50,profit*a.split/100*(0.3+rnd()*0.6)));
+      const st=pick(['requested','requested','approved','paid','paid','rejected']);
+      payouts.push({id:'p'+idx,accountId:a.id,trader:a.trader,plan:a.plan,amount:amt,status:st,at:Date.now()-Math.floor(rnd()*20)*86400000});
+    }
+  });
+  const channelDefs=['Organic','YouTube','Instagram','Affiliates','Google Ads','Telegram'];
+  const channels=channelDefs.map(name=>{const signups=20+Math.floor(rnd()*180);const spend=name==='Organic'?0:Math.floor(rnd()*4000+600);const funded=Math.max(1,Math.floor(signups*(0.05+rnd()*0.05)));const revenue=Math.floor(signups*(60+rnd()*120));return{name,spend,signups,funded,revenue};});
+  const affiliates=Array.from({length:6},()=>{const referrals=10+Math.floor(rnd()*120);const funded=Math.floor(referrals*(0.05+rnd()*0.06));const earnings=Math.floor(referrals*(8+rnd()*22));return{name:pick(FIRST)+' '+pick(LAST),code:'IND'+(1000+Math.floor(rnd()*9000)),referrals,funded,earnings};}).sort((x,y)=>y.earnings-x.earnings);
+  return {users,accounts,payouts,plans:PLANS,marketing:{channels,affiliates}};
+}
+function save(){if(store.mode!=='live')localStorage.setItem(KEY,JSON.stringify(DB));}
+function resetDemo(){if(store.mode==='live'){load().then(()=>go(CUR));return;}localStorage.removeItem(KEY);DB=genDB();save();go(CUR);}
+
+/* ---------- mode + live API ---------- */
+const store={mode:'demo',token:null,api:'http://localhost:4000'};
+let MODE='demo';
+const val=id=>document.getElementById(id).value;
+function setMode(m){MODE=m;
+  document.getElementById('mDemo').classList.toggle('on',m==='demo');
+  document.getElementById('mLive').classList.toggle('on',m==='live');
+  document.getElementById('liveFields').classList.toggle('hide',m!=='live');
+  document.getElementById('modeHelp').textContent=m==='demo'
+    ?'Sample data in your browser. Nothing to connect.'
+    :'Connect to your running backend and sign in with an admin account.';
+}
+async function api(path,opts={}){
+  const headers={'Content-Type':'application/json',...(opts.headers||{})};
+  if(store.token) headers['Authorization']='Bearer '+store.token;
+  const res=await fetch(store.api+path,{...opts,headers});
+  const t=await res.text(); let d; try{d=t?JSON.parse(t):null}catch{d=t}
+  if(!res.ok) throw new Error((d&&d.error&&(typeof d.error==='string'?d.error:JSON.stringify(d.error)))||('HTTP '+res.status));
+  return d;
+}
+async function load(){
+  if(store.mode==='live'){ await loadLive(); return; }
+  try{DB=JSON.parse(localStorage.getItem(KEY))}catch{DB=null} if(!DB){DB=genDB();save();}
+}
+async function loadLive(){
+  const [usersRaw,accountsRaw,payoutsRaw,plansRaw]=await Promise.all([
+    api('/admin/users'),api('/accounts'),api('/payouts'),api('/plans')]);
+  const userById={}; usersRaw.forEach(u=>userById[u.id]=u);
+  const users=usersRaw.map(u=>({id:u.id,name:u.fullName||u.email,email:u.email,country:u.country||'—',city:u.country||'—',kyc:u.kycStatus,joined:new Date(u.createdAt).getTime(),accountCount:u.accountCount}));
+  const accounts=accountsRaw.map(a=>{const p=a.plan;const basis=p.ddBasis==='equity'?a.equity:a.balance;const mb=p.maxDdTrailing?a.peakValue:a.startingBalance;const ddUsed=mb>0?Math.max(0,(mb-basis)/mb*100):0;const u=userById[a.userId];
+    return {id:a.id,userId:a.userId,trader:(u&&(u.fullName||u.email))||a.mt5Login,plan:p.name,planId:p.id,size:p.accountSize,split:p.profitSplitPct,country:(u&&u.country)||'—',login:a.mt5Login||'—',status:a.status,balance:a.balance,equity:a.equity,price:p.priceCents/100,maxDd:p.maxDdPct,ddUsed:Math.round(ddUsed*100)/100,flagged:false};});
+  const acctById={}; accounts.forEach(a=>acctById[a.id]=a);
+  const payouts=payoutsRaw.map(p=>({id:p.id,accountId:p.accountId,trader:(acctById[p.accountId]&&acctById[p.accountId].trader)||'—',plan:(acctById[p.accountId]&&acctById[p.accountId].plan)||'',amount:(p.amountCents||0)/100,status:p.status,at:new Date(p.requestedAt||p.at||Date.now()).getTime()}));
+  const plans=plansRaw.map(p=>({id:p.id,name:p.name,size:p.accountSize,price:p.priceCents/100,phases:p.phases,split:p.profitSplitPct}));
+  DB={users,accounts,payouts,plans,marketing:sampleMarketing()};
+}
+function sampleMarketing(){
+  const ch=[['Organic',0,140],['YouTube',2200,180],['Instagram',1600,150],['Affiliates',900,210],['Google Ads',3400,160],['Telegram',700,90]]
+    .map(([name,spend,signups])=>({name,spend,signups,funded:Math.round(signups*0.07),revenue:Math.round(signups*120)}));
+  const aff=[['Aman V.','IND4821'],['Priya M.','IND7322'],['Chen W.','IND1190'],['Mateo G.','IND8845'],['Liam O.','IND2207']]
+    .map(([name,code],i)=>({name,code,referrals:120-i*18,funded:9-i,earnings:2400-i*380}));
+  return {channels:ch,affiliates:aff};
+}
+
+/* ---------- auth ---------- */
+async function login(){
+  store.mode=MODE;
+  if(MODE==='live'){
+    store.api=val('apiBase').trim().replace(/\/$/,'');
+    try{const r=await api('/auth/login',{method:'POST',body:JSON.stringify({email:val('email'),password:val('password')})});
+      if(!r||!r.user||r.user.role!=='admin'){throw new Error('That account is not an admin');}
+      store.token=r.token;
+    }catch(e){document.getElementById('authErr').textContent=e.message;return;}
+  }
+  document.getElementById('auth').classList.add('hide');document.getElementById('app').classList.remove('hide');
+  document.getElementById('modeChip').textContent=MODE==='live'?'Live':'Demo';
+  try{await load();}catch(e){document.getElementById('view').innerHTML='<div class="card" style="color:var(--red)">'+e.message+'</div>';}
+  updateCounts();go('overview');
+}
+function logout(){location.reload();}
+function updateCounts(){
+  document.getElementById('ctUsers').textContent=DB.users.length;
+  document.getElementById('ctAccts').textContent=DB.accounts.length;
+  document.getElementById('ctPay').textContent=DB.payouts.filter(p=>p.status==='requested').length||'';
+  document.getElementById('ctKyc').textContent=DB.users.filter(u=>u.kyc==='pending').length||'';
+  const r=document.getElementById('ctRisk'); if(r)r.textContent=DB.accounts.filter(a=>a.status!=='breached'&&a.ddUsed/a.maxDd>=0.65).length||'';
+}
+
+/* ---------- router ---------- */
+let CUR='overview',chart=null;
+const TITLES={overview:['Overview','Platform health at a glance'],users:['Users','Traders and their KYC status'],accounts:['Accounts','All evaluation and funded accounts'],risk:['Risk & Liability','Firm-level exposure and the funded book'],payouts:['Payouts','Review and process withdrawal requests'],kyc:['KYC queue','Verify trader identities'],marketing:['Marketing','Acquisition, channels and affiliates'],plans:['Plans','Challenge programs and pricing']};
+function go(v){CUR=v;document.querySelectorAll('.navitem').forEach(b=>b.classList.toggle('active',b.dataset.v===v));
+  const t=TITLES[v];document.getElementById('title').textContent=t[0];document.getElementById('sub').textContent=t[1];
+  if(chart){chart.destroy();chart=null}
+  ({overview:renderOverview,users:renderUsers,accounts:renderAccounts,risk:renderRisk,payouts:renderPayouts,kyc:renderKyc,marketing:renderMarketing,plans:renderPlans})[v]();
+}
+function paint(html){const el=document.getElementById('view');el.innerHTML=html;el.className='view-anim';updateCounts();}
+
+/* ---------- overview ---------- */
+function renderOverview(){
+  const a=DB.accounts,p=DB.payouts;
+  const funded=a.filter(x=>x.status==='funded').length, breached=a.filter(x=>x.status==='breached').length;
+  const active=a.filter(x=>x.status!=='breached').length;
+  const revenue=a.reduce((s,x)=>s+x.price,0);
+  const pendingPay=p.filter(x=>x.status==='requested'),paidAmt=p.filter(x=>x.status==='paid').reduce((s,x)=>s+x.amount,0);
+  const pendAmt=pendingPay.reduce((s,x)=>s+x.amount,0);
+  paint(`
+    <div class="grid cols-4" style="margin-bottom:16px">
+      <div class="card kpi"><div class="label">Traders</div><div class="val">${DB.users.length}</div></div>
+      <div class="card kpi"><div class="label">Funded accounts</div><div class="val grad">${funded}</div></div>
+      <div class="card kpi"><div class="label">Revenue (fees)</div><div class="val">${money(revenue)}</div></div>
+      <div class="card kpi"><div class="label">Paid out</div><div class="val">${money(paidAmt)}</div></div>
+    </div>
+    <div class="grid cols-3" style="margin-bottom:16px">
+      <div class="card kpi"><div class="label">Active accounts</div><div class="val">${active}</div></div>
+      <div class="card kpi"><div class="label">Breached</div><div class="val neg">${breached}</div></div>
+      <div class="card kpi"><div class="label">Pending payouts</div><div class="val">${pendingPay.length} · ${money(pendAmt)}</div></div>
+    </div>
+    <div class="grid cols-2" style="margin-bottom:16px">
+      <div class="card"><div class="row between"><b>Payouts (last 6 months)</b><span class="pill">USD</span></div><canvas id="ovChart" height="150" style="margin-top:10px"></canvas></div>
+      <div class="card"><div class="row between"><b>Payout queue</b><button class="btn sm" onclick="go('payouts')">Open queue →</button></div>
+        <div class="scrollx"><table style="margin-top:8px"><thead><tr><th>Trader</th><th>Amount</th><th>Status</th></tr></thead><tbody>
+        ${p.slice(0,6).map(x=>`<tr><td>${esc(x.trader)}</td><td>${money(x.amount)}</td><td>${payBadge(x.status)}</td></tr>`).join('')}
+        </tbody></table></div></div>
+    </div>
+    ${overviewAnalytics()}`);
+  const ctx=document.getElementById('ovChart');
+  const months=['Jan','Feb','Mar','Apr','May','Jun'],data=[42,58,71,64,89,paidAmt/1000||95].map(v=>Math.round(v));
+  chart=new Chart(ctx,{type:'bar',data:{labels:months,datasets:[{label:'Payouts ($k)',data:[42,58,71,64,89,Math.max(40,Math.round(paidAmt/1000))],backgroundColor:'#4f8cff',borderRadius:6}]},
+    options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#5d6a87'},grid:{display:false}},y:{ticks:{color:'#5d6a87'},grid:{color:'rgba(255,255,255,.05)'}}}}});
+}
+
+function overviewAnalytics(){
+  const a=DB.accounts, fundedC=a.filter(x=>x.status==='funded').length;
+  const sold=a.length, inEval=a.filter(x=>x.status.startsWith('phase')).length, breached=a.filter(x=>x.status==='breached').length;
+  const paidAccts=new Set(DB.payouts.filter(p=>p.status==='paid').map(p=>p.accountId)).size;
+  const passRate=sold?fundedC/sold*100:0;
+  const revenue=a.reduce((s,x)=>s+x.price,0);
+  const paid=DB.payouts.filter(p=>p.status==='paid').reduce((s,p)=>s+p.amount,0);
+  const liab=a.filter(x=>x.status==='funded').reduce((s,x)=>s+Math.max(0,(x.equity-x.size))*x.split/100,0);
+  const ptr=revenue?paid/revenue*100:0, margin=revenue?(revenue-paid)/revenue*100:0, arpu=DB.users.length?revenue/DB.users.length:0;
+  const stages=[['Challenges sold',sold],['In evaluation',inEval],['Funded',fundedC],['Received payout',paidAccts]];
+  const mx=Math.max(...stages.map(s=>s[1]),1);
+  return `<div class="grid cols-2">
+    <div class="card"><div class="row between"><b>Conversion funnel</b><span class="pill">pass rate ${passRate.toFixed(0)}%</span></div>
+      <div style="margin-top:10px">${stages.map(([l,n])=>`<div class="funnel-row"><span class="muted small" style="width:128px">${l}</span><div class="fb" style="width:${Math.max(8,n/mx*100)}%">${n}</div></div>`).join('')}</div>
+      <div class="faint small" style="margin-top:6px">Industry evaluation pass rate is typically 5–10% — your funnel is where the business is won or lost.</div></div>
+    <div class="card"><div class="row between"><b>Unit economics</b><span class="pill">USD</span></div>
+      <div class="scrollx"><table style="margin-top:8px"><tbody>
+        <tr><td class="muted">Revenue (challenge fees)</td><td><b>${money(revenue)}</b></td></tr>
+        <tr><td class="muted">Paid out to traders</td><td class="neg">${money(paid)}</td></tr>
+        <tr><td class="muted">Outstanding liability</td><td class="neg">${money(liab)}</td></tr>
+        <tr><td class="muted">Payout / revenue ratio</td><td class="${ptr>65?'neg':ptr>=40?'pos':'warn'}">${ptr.toFixed(0)}% <span class="faint small">(healthy 40–65%)</span></td></tr>
+        <tr><td class="muted">Net margin</td><td class="pos">${margin.toFixed(0)}% <span class="faint small">(healthy 20–40%)</span></td></tr>
+        <tr><td class="muted">ARPU</td><td>${money(arpu)}</td></tr>
+        <tr><td class="muted">Breached accounts</td><td>${breached}</td></tr>
+      </tbody></table></div>
+      <button class="btn ghost sm" style="margin-top:10px" onclick="go('risk')">Open risk desk →</button></div>
+  </div>`;
+}
+
+/* ---------- users ---------- */
+function renderUsers(){
+  const rows=DB.users.map(u=>{const accs=DB.accounts.filter(a=>a.userId===u.id).length;
+    return `<tr><td><div class="row"><div class="av">${u.name[0]}</div><div><b>${esc(u.name)}</b><div class="faint small">${esc(u.email)}</div></div></div></td>
+      <td>${esc(u.city)}, ${esc(u.country)}</td><td>${accs}</td><td>${kycBadge(u.kyc)}</td><td class="faint small">${new Date(u.joined).toLocaleDateString()}</td>
+      <td>${u.kyc==='pending'?`<button class="btn green sm" onclick="verifyKyc('${u.id}',1)">Verify</button> <button class="btn red sm" onclick="verifyKyc('${u.id}',0)">Reject</button>`:'<span class="faint small">—</span>'}</td></tr>`;}).join('');
+  paint(`<div class="card"><div class="row between" style="margin-bottom:6px"><b>${DB.users.length} traders</b><input id="uSearch" placeholder="Search name or email" style="max-width:240px" oninput="filterUsers()"/></div>
+    <div class="scrollx"><table><thead><tr><th>Trader</th><th>Location</th><th>Accounts</th><th>KYC</th><th>Joined</th><th>Actions</th></tr></thead><tbody id="uBody">${rows}</tbody></table></div></div>`);
+}
+function filterUsers(){const q=(document.getElementById('uSearch').value||'').toLowerCase();
+  document.querySelectorAll('#uBody tr').forEach(tr=>{tr.style.display=tr.textContent.toLowerCase().includes(q)?'':'none';});}
+async function verifyKyc(id,ok){
+  if(store.mode==='live'){try{await api('/admin/users/'+id+'/kyc',{method:'PATCH',body:JSON.stringify({status:ok?'verified':'rejected'})});await load();go(CUR);}catch(e){alert(e.message)}return;}
+  const u=DB.users.find(x=>x.id===id);if(u){u.kyc=ok?'verified':'rejected';save();go(CUR);}}
+
+/* ---------- accounts ---------- */
+let ACC_FILTER='all';
+function renderAccounts(){
+  const f=ACC_FILTER, list=DB.accounts.filter(a=>f==='all'?true:f==='phase'?a.status.startsWith('phase'):f==='flagged'?a.flagged:a.status===f);
+  const tab=(k,l)=>`<button class="${ACC_FILTER===k?'on':''}" onclick="ACC_FILTER='${k}';renderAccounts()">${l}</button>`;
+  const rows=list.map(a=>{const pl=((a.equity-a.size)/a.size*100);
+    return `<tr><td><b>${esc(a.trader)}</b>${a.flagged?' <span class="pill" style="color:var(--red);border-color:rgba(255,93,108,.4)">🚩</span>':''}</td><td>${esc(a.plan)}</td><td class="faint small">${esc(a.login)}</td><td>${statusBadge(a.status)}</td>
+      <td>${money(a.balance)}</td><td class="${pl>=0?'pos':'neg'}">${pl>=0?'+':''}${pl.toFixed(2)}%</td>
+      <td style="min-width:110px">${gaugeMini(a.ddUsed,a.maxDd)}<span class="faint small">${a.ddUsed.toFixed(1)}% / ${a.maxDd}%</span></td>
+      <td>${a.status!=='breached'&&a.status!=='funded'?`<button class="btn green sm" onclick="setAcc('${a.id}','funded')">Pass</button> `:''}${a.status!=='breached'?`<button class="btn red sm" onclick="setAcc('${a.id}','breached')">Breach</button>`:'<span class="faint small">—</span>'}</td></tr>`;}).join('');
+  paint(`<div class="tabs">${tab('all','All')}${tab('phase','In evaluation')}${tab('funded','Funded')}${tab('breached','Breached')}${tab('flagged','🚩 Flagged')}</div>
+    <div class="card"><div class="scrollx"><table><thead><tr><th>Trader</th><th>Plan</th><th>MT5 login</th><th>Status</th><th>Balance</th><th>P/L</th><th>DD buffer</th><th>Actions</th></tr></thead><tbody>${rows||'<tr><td colspan="8" class="muted">No accounts</td></tr>'}</tbody></table></div></div>`);
+}
+async function setAcc(id,st){
+  if(store.mode==='live'){try{await api('/accounts/'+id+'/status',{method:'POST',body:JSON.stringify({status:st})});await load();renderAccounts();}catch(e){alert(e.message)}return;}
+  const a=DB.accounts.find(x=>x.id===id);if(a){a.status=st;save();renderAccounts();}}
+
+/* ---------- risk & liability ---------- */
+const liabOf=a=>Math.max(0,(a.equity-a.size))*a.split/100;
+function gaugeMini(used,limit){const k=Math.min(100,used/limit*100),col=k>=85?'var(--red)':k>=60?'var(--amber)':'var(--green)';
+  return `<div class="ddbar"><i style="width:${k.toFixed(0)}%;background:${col}"></i></div>`;}
+function renderRisk(){
+  const funded=DB.accounts.filter(a=>a.status==='funded');
+  const exposure=funded.reduce((s,a)=>s+a.size,0);
+  const outstanding=funded.reduce((s,a)=>s+liabOf(a),0);
+  const revenue=DB.accounts.reduce((s,a)=>s+a.price,0);
+  const paid=DB.payouts.filter(p=>p.status==='paid').reduce((s,p)=>s+p.amount,0);
+  const ptr=revenue?paid/revenue*100:0, margin=revenue?(revenue-paid)/revenue*100:0;
+  const atrisk=DB.accounts.filter(a=>a.status!=='breached'&&a.ddUsed/a.maxDd>=0.65).sort((x,y)=>y.ddUsed/y.maxDd-x.ddUsed/x.maxDd);
+  const top=funded.slice().filter(a=>liabOf(a)>0).sort((x,y)=>liabOf(y)-liabOf(x)).slice(0,8);
+  const flagged=DB.accounts.filter(a=>a.flagged);
+  const byC={}; funded.forEach(a=>{byC[a.country]=(byC[a.country]||0)+liabOf(a);});
+  const cc=Object.entries(byC).sort((x,y)=>y[1]-x[1]);
+  const maxC=cc.length?cc[0][1]:1;
+  const ptrClass=ptr>65?'neg':ptr>=40?'pos':'warn';
+  paint(`
+    <div class="grid cols-4" style="margin-bottom:16px">
+      <div class="card kpi"><div class="label">Funded capital (exposure)</div><div class="val">${money(exposure)}</div><div class="faint small">total simulated capital live</div></div>
+      <div class="card kpi"><div class="label">Outstanding liability</div><div class="val neg">${money(outstanding)}</div><div class="faint small">owed if all withdraw now</div></div>
+      <div class="card kpi"><div class="label">Payout / revenue</div><div class="val ${ptrClass}">${ptr.toFixed(0)}%</div><div class="faint small">healthy 40–65%</div></div>
+      <div class="card kpi"><div class="label">Net margin</div><div class="val grad">${margin.toFixed(0)}%</div><div class="faint small">healthy 20–40%</div></div>
+    </div>
+    <div class="grid cols-2" style="margin-bottom:16px">
+      <div class="card"><div class="row between"><b>⚠ At-risk accounts</b><span class="pill">${atrisk.length} near breach</span></div>
+        <div class="muted small" style="margin:4px 0 6px">Funded & evaluation accounts using ≥65% of their max drawdown.</div>
+        <div class="scrollx"><table><thead><tr><th>Trader</th><th>Plan</th><th>Status</th><th>DD used</th><th>Buffer</th></tr></thead><tbody>
+        ${atrisk.slice(0,9).map(a=>`<tr><td>${esc(a.trader)}</td><td class="faint small">${esc(a.plan)}</td><td>${statusBadge(a.status)}</td><td>${a.ddUsed.toFixed(1)}% / ${a.maxDd}%</td><td style="min-width:100px">${gaugeMini(a.ddUsed,a.maxDd)}</td></tr>`).join('')||'<tr><td colspan="5" class="muted">None near breach</td></tr>'}
+        </tbody></table></div></div>
+      <div class="card"><div class="row between"><b>Top liability — A-book candidates</b><span class="pill">hedge to live</span></div>
+        <div class="muted small" style="margin:4px 0 6px">Your most profitable funded traders — the ones worth copying to a live broker.</div>
+        <div class="scrollx"><table><thead><tr><th>Trader</th><th>Plan</th><th>You owe (split)</th></tr></thead><tbody>
+        ${top.map(a=>`<tr><td>${esc(a.trader)}</td><td class="faint small">${esc(a.plan)}</td><td class="neg">${money(liabOf(a))}</td></tr>`).join('')||'<tr><td colspan="3" class="muted">No profit owed yet</td></tr>'}
+        </tbody></table></div></div>
+    </div>
+    <div class="grid cols-2">
+      <div class="card"><div class="row between"><b>Liability concentration by country</b><span class="pill">diversify exposure</span></div>
+        <div style="margin-top:12px">${cc.map(([c,vv])=>`<div class="row" style="gap:10px;margin:8px 0"><span class="muted small" style="width:90px">${esc(c)}</span><div class="ddbar" style="flex:1"><i style="width:${(vv/maxC*100).toFixed(0)}%;background:var(--grad)"></i></div><span class="small" style="width:80px;text-align:right">${money(vv)}</span></div>`).join('')||'<div class="muted">No funded exposure</div>'}</div></div>
+      <div class="card"><div class="row between"><b>🚩 Flagged for review</b><span class="pill">${flagged.length}</span></div>
+        <div class="muted small" style="margin:4px 0 6px">Accounts auto-flagged for a prohibited-strategy check (HFT, arbitrage, hedging, etc.).</div>
+        <div class="scrollx"><table><thead><tr><th>Trader</th><th>Plan</th><th>Login</th><th>Action</th></tr></thead><tbody>
+        ${flagged.slice(0,8).map(a=>`<tr><td>${esc(a.trader)}</td><td class="faint small">${esc(a.plan)}</td><td class="faint small">${esc(a.login)}</td><td><button class="btn red sm" onclick="setAcc('${a.id}','breached')">Breach</button> <button class="btn ghost sm" onclick="clearFlag('${a.id}')">Clear</button></td></tr>`).join('')||'<tr><td colspan="4" class="muted">Nothing flagged</td></tr>'}
+        </tbody></table></div></div>
+    </div>
+    <div style="margin-top:16px">${abookSim(funded)}</div>
+    <div class="card" style="margin-top:16px"><div class="row between" style="flex-wrap:wrap;gap:10px"><div><b>Daily risk report</b><div class="muted small">One-page snapshot for your morning review.</div></div><button class="btn sm" onclick="dailyReport()">Generate report</button></div></div>`);
+}
+function clearFlag(id){const a=DB.accounts.find(x=>x.id===id);if(a){a.flagged=false;save();renderRisk();}}
+let AB_THRESH=300;
+function abookSim(funded){
+  const a=funded.filter(x=>liabOf(x)>=AB_THRESH), b=funded.filter(x=>liabOf(x)<AB_THRESH);
+  const aLiab=a.reduce((s,x)=>s+liabOf(x),0), bLiab=b.reduce((s,x)=>s+liabOf(x),0), tot=aLiab+bLiab;
+  const presets=[0,300,1000,3000];
+  const box=(v,l)=>`<div style="text-align:center;padding:14px;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:12px"><div style="font-family:Sora;font-size:22px;font-weight:800">${v}</div><div class="muted small" style="margin-top:4px">${l}</div></div>`;
+  return `<div class="card"><div class="row between"><b>A-book / B-book hedging simulator</b><span class="pill">strategy</span></div>
+    <div class="muted small" style="margin:4px 0 8px">Traders you owe ≥ threshold get hedged to a live broker (A-book); smaller ones stay internal (B-book). A higher threshold means less hedging cost but more retained risk.</div>
+    <div class="tabs">${presets.map(p=>`<button class="${AB_THRESH===p?'on':''}" onclick="AB_THRESH=${p};renderRisk()">≥ ${money(p)}</button>`).join('')}</div>
+    <div class="grid cols-3">${box(a.length+' · '+money(aLiab),'A-book — hedge to live')}${box(b.length+' · '+money(bLiab),'B-book — retained internally')}${box((tot?aLiab/tot*100:0).toFixed(0)+'%','of liability hedged')}</div></div>`;
+}
+function dailyReport(){
+  const funded=DB.accounts.filter(a=>a.status==='funded');
+  const exposure=funded.reduce((s,a)=>s+a.size,0), outstanding=funded.reduce((s,a)=>s+liabOf(a),0);
+  const revenue=DB.accounts.reduce((s,a)=>s+a.price,0), paid=DB.payouts.filter(p=>p.status==='paid').reduce((s,p)=>s+p.amount,0);
+  const atrisk=DB.accounts.filter(a=>a.status!=='breached'&&a.ddUsed/a.maxDd>=0.65).length;
+  const pend=DB.payouts.filter(p=>p.status==='requested'), pendAmt=pend.reduce((s,p)=>s+p.amount,0);
+  const lines=[
+    'INDPIPS — Daily Risk Report',
+    new Date().toDateString(),
+    '',
+    'Funded capital (exposure): '+money(exposure),
+    'Outstanding payout liability: '+money(outstanding),
+    'Payout / revenue ratio: '+(revenue?(paid/revenue*100).toFixed(0):0)+'%  (healthy 40-65%)',
+    'Net margin: '+(revenue?((revenue-paid)/revenue*100).toFixed(0):0)+'%',
+    'Accounts near breach (>=65% DD): '+atrisk,
+    'Pending payout requests: '+pend.length+' ('+money(pendAmt)+')',
+    'Flagged for review: '+DB.accounts.filter(a=>a.flagged).length,
+    'Funded accounts: '+funded.length+'  |  Breached: '+DB.accounts.filter(a=>a.status==='breached').length,
+  ];
+  const text=lines.join('\n');
+  window.__report=text;
+  document.getElementById('modalRoot').innerHTML=`<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal" style="max-width:520px">
+    <div class="row between"><b>Daily risk report</b><button class="btn ghost sm" onclick="closeModal()">✕</button></div>
+    <pre style="white-space:pre-wrap;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:10px;font-family:ui-monospace,Menlo,monospace;font-size:13px;color:var(--text)">${esc(text)}</pre>
+    <div class="row" style="margin-top:10px;flex-wrap:wrap;gap:8px"><button class="btn sm" onclick="copyReport()">Copy</button><span class="faint small">Connect the backend scheduler to email this every morning.</span></div></div></div>`;
+}
+function copyReport(){try{navigator.clipboard.writeText(window.__report||'')}catch{} alert('Report copied ✓');}
+
+/* ---------- payouts ---------- */
+function renderPayouts(){
+  const q=DB.payouts.slice().sort((a,b)=>(a.status==='requested'?-1:0)-(b.status==='requested'?-1:0));
+  const rows=q.map(p=>`<tr><td><b>${esc(p.trader)}</b><div class="faint small">${esc(p.plan)}</div></td><td>${money2(p.amount)}</td><td class="faint small">${new Date(p.at).toLocaleDateString()}</td><td>${payBadge(p.status)}</td>
+    <td>${p.status==='requested'?`<button class="btn green sm" onclick="payAction('${p.id}','approved')">Approve</button> <button class="btn red sm" onclick="payAction('${p.id}','rejected')">Reject</button>`
+      :p.status==='approved'?`<button class="btn sm" onclick="payAction('${p.id}','paid')">Mark paid</button>`:'<span class="faint small">—</span>'}</td></tr>`).join('');
+  const pend=DB.payouts.filter(p=>p.status==='requested'),amt=pend.reduce((s,p)=>s+p.amount,0);
+  paint(`<div class="grid cols-3" style="margin-bottom:16px">
+      <div class="card kpi"><div class="label">Pending requests</div><div class="val">${pend.length}</div></div>
+      <div class="card kpi"><div class="label">Pending amount</div><div class="val">${money(amt)}</div></div>
+      <div class="card kpi"><div class="label">Paid this cycle</div><div class="val grad">${money(DB.payouts.filter(p=>p.status==='paid').reduce((s,p)=>s+p.amount,0))}</div></div>
+    </div>
+    <div class="card"><div class="scrollx"><table><thead><tr><th>Trader</th><th>Amount</th><th>Requested</th><th>Status</th><th>Action</th></tr></thead><tbody>${rows||'<tr><td colspan="5" class="muted">No payouts</td></tr>'}</tbody></table></div></div>`);
+}
+async function payAction(id,st){
+  if(store.mode==='live'){try{await api('/payouts/'+id,{method:'PATCH',body:JSON.stringify({status:st})});await load();renderPayouts();updateCounts();}catch(e){alert(e.message)}return;}
+  const p=DB.payouts.find(x=>x.id===id);if(p){p.status=st;save();renderPayouts();updateCounts();}}
+
+/* ---------- kyc ---------- */
+function renderKyc(){
+  const pend=DB.users.filter(u=>u.kyc==='pending');
+  if(!pend.length){paint(`<div class="card"><b>All clear ✓</b><div class="muted small" style="margin-top:6px">No pending KYC verifications.</div></div>`);return;}
+  paint(`<div class="grid cols-3">${pend.map(u=>`<div class="card"><div class="row"><div class="av">${u.name[0]}</div><div><b>${esc(u.name)}</b><div class="faint small">${esc(u.email)}</div></div></div>
+    <table class="small" style="margin:10px 0"><tbody><tr><td class="muted">Country</td><td>${esc(u.country)}</td></tr><tr><td class="muted">Document</td><td>Passport · uploaded</td></tr><tr><td class="muted">Submitted</td><td>${new Date(u.joined).toLocaleDateString()}</td></tr></tbody></table>
+    <div class="row"><button class="btn green sm" style="flex:1" onclick="verifyKyc('${u.id}',1)">Verify</button><button class="btn red sm" style="flex:1" onclick="verifyKyc('${u.id}',0)">Reject</button></div></div>`).join('')}</div>`);
+}
+
+/* ---------- marketing ---------- */
+function renderMarketing(){
+  const m=DB.marketing||{channels:[],affiliates:[]}, ch=m.channels;
+  const spend=ch.reduce((s,c)=>s+c.spend,0), signups=ch.reduce((s,c)=>s+c.signups,0), rev=ch.reduce((s,c)=>s+c.revenue,0), funded=ch.reduce((s,c)=>s+c.funded,0);
+  const cac=signups?spend/signups:0, roas=spend?rev/spend:0, conv=signups?funded/signups*100:0;
+  paint(`
+    <div class="grid cols-4" style="margin-bottom:16px">
+      <div class="card kpi"><div class="label">Marketing spend</div><div class="val">${money(spend)}</div></div>
+      <div class="card kpi"><div class="label">Signups</div><div class="val">${signups}</div></div>
+      <div class="card kpi"><div class="label">Blended CAC</div><div class="val">${money(cac)}</div></div>
+      <div class="card kpi"><div class="label">ROAS</div><div class="val grad">${roas.toFixed(1)}x</div></div>
+    </div>
+    <div class="grid cols-2">
+      <div class="card"><b>Channel performance</b><div class="scrollx"><table style="margin-top:8px"><thead><tr><th>Channel</th><th>Spend</th><th>Signups</th><th>CAC</th><th>Funded</th><th>Revenue</th><th>ROAS</th></tr></thead><tbody>
+        ${ch.map(c=>`<tr><td><b>${esc(c.name)}</b></td><td>${money(c.spend)}</td><td>${c.signups}</td><td>${money(c.signups?c.spend/c.signups:0)}</td><td>${c.funded}</td><td>${money(c.revenue)}</td><td class="${c.spend&&c.revenue/c.spend>=2?'pos':c.spend?'warn':'pos'}">${c.spend?(c.revenue/c.spend).toFixed(1)+'x':'∞'}</td></tr>`).join('')}
+      </tbody></table></div></div>
+      <div class="card"><b>Top affiliates</b><div class="scrollx"><table style="margin-top:8px"><thead><tr><th>Affiliate</th><th>Code</th><th>Referrals</th><th>Funded</th><th>Earnings</th></tr></thead><tbody>
+        ${m.affiliates.map(a=>`<tr><td><b>${esc(a.name)}</b></td><td class="faint small">${esc(a.code)}</td><td>${a.referrals}</td><td>${a.funded}</td><td class="pos">${money(a.earnings)}</td></tr>`).join('')}
+      </tbody></table></div></div>
+    </div>
+    <div class="card" style="margin-top:16px"><div class="muted small">Conversion to funded across channels: <b>${conv.toFixed(1)}%</b>. Track CAC against the lifetime value of a funded trader (fees + retries + add-ons). Channels under 2x ROAS usually need creative or targeting fixes before scaling spend.</div></div>`);
+}
+
+/* ---------- plans ---------- */
+function renderPlans(){
+  paint(`<div class="grid cols-3">${DB.plans.map(p=>`<div class="card"><div class="row between"><b>${esc(p.name)}</b><span class="pill">${p.phases===0?'instant':p.phases+'-step'}</span></div>
+    <table class="small" style="margin:10px 0"><tbody><tr><td class="muted">Account size</td><td>${money(p.size)}</td></tr><tr><td class="muted">Fee</td><td>${money(p.price)}</td></tr><tr><td class="muted">Profit split</td><td>${p.split}%</td></tr></tbody></table>
+    <button class="btn ghost sm" style="width:100%" onclick="editPlan('${p.id}')">Edit pricing</button></div>`).join('')}</div>
+    <div class="card" style="margin-top:16px"><div class="muted small">Rule parameters (drawdown, targets, payout days) are defined per plan in the backend. This console manages pricing and availability.</div></div>`);
+}
+function editPlan(id){const p=DB.plans.find(x=>x.id===id);
+  document.getElementById('modalRoot').innerHTML=`<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal">
+    <div class="row between"><b>Edit ${esc(p.name)}</b><button class="btn ghost sm" onclick="closeModal()">✕</button></div>
+    <label class="fld"><span>Fee (USD)</span><input id="epPrice" type="number" value="${p.price}"/></label>
+    <label class="fld"><span>Profit split %</span><input id="epSplit" type="number" value="${p.split}"/></label>
+    <button class="btn" style="width:100%;margin-top:6px" onclick="savePlan('${p.id}')">Save</button></div></div>`;
+}
+function savePlan(id){const p=DB.plans.find(x=>x.id===id);if(p){p.price=+document.getElementById('epPrice').value||p.price;p.split=+document.getElementById('epSplit').value||p.split;save();closeModal();go('plans');}}
+function closeModal(){document.getElementById('modalRoot').innerHTML='';}
+setMode('demo');
+</script>
+</body>
+</html>
