@@ -16,10 +16,9 @@ services:
       - key: MT5_ADAPTER
         value: mock                # switch to metaapi / eabridge when ready
       - key: DATABASE_URL
-        value: file:/data/indpips.db
+        value: file:/tmp/indpips.db
       - key: SYNC_INTERVAL_MS
         value: "60000"
-    disk:
-      name: data
-      mountPath: /data
-      sizeGB: 1
+    # Free tier has no persistent disk, so SQLite lives in ephemeral /tmp and
+    # re-seeds on each deploy. Add a disk (paid) or swap to Render Postgres to
+    # persist data across deploys.
